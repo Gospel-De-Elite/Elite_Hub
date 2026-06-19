@@ -5,6 +5,10 @@ const required = [
   "JWT_ACCESS_SECRET",
   "JWT_REFRESH_SECRET",
   "REDIS_URL",
+  "PAYSTACK_SECRET_KEY",
+  "MONNIFY_API_KEY",
+  "MONNIFY_SECRET_KEY",
+  "MONNIFY_CONTRACT_CODE",
 ];
 
 for (const key of required) {
@@ -26,4 +30,16 @@ module.exports = {
   },
 
   redisUrl: process.env.REDIS_URL,
+
+  paystack: {
+    secretKey: process.env.PAYSTACK_SECRET_KEY,
+    publicKey: process.env.PAYSTACK_PUBLIC_KEY,
+  },
+
+  monnify: {
+    apiKey: process.env.MONNIFY_API_KEY,
+    secretKey: process.env.MONNIFY_SECRET_KEY,
+    contractCode: process.env.MONNIFY_CONTRACT_CODE,
+    baseUrl: process.env.MONNIFY_BASE_URL || "https://sandbox.monnify.com",
+  },
 };
