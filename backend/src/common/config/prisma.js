@@ -1,0 +1,9 @@
+const { PrismaClient } = require("@prisma/client");
+
+// Single shared Prisma client instance across the entire app —
+// never instantiate PrismaClient anywhere else.
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+});
+
+module.exports = prisma;
