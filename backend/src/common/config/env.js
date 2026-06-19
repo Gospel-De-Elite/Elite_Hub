@@ -9,6 +9,10 @@ const required = [
   "MONNIFY_API_KEY",
   "MONNIFY_SECRET_KEY",
   "MONNIFY_CONTRACT_CODE",
+  "SME_API_KEY",
+  "SME_API_BASE_URL",
+  "VTUNG_API_KEY",
+  "VTUNG_BASE_URL",
 ];
 
 for (const key of required) {
@@ -41,5 +45,15 @@ module.exports = {
     secretKey: process.env.MONNIFY_SECRET_KEY,
     contractCode: process.env.MONNIFY_CONTRACT_CODE,
     baseUrl: process.env.MONNIFY_BASE_URL || "https://sandbox.monnify.com",
+  },
+
+  smeApi: {
+    apiKey: process.env.SME_API_KEY,
+    baseUrl: process.env.SME_API_BASE_URL,
+  },
+
+  vtuNg: {
+    apiKey: process.env.VTUNG_API_KEY,
+    baseUrl: process.env.VTUNG_BASE_URL,
   },
 };

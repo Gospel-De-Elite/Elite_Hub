@@ -1,5 +1,5 @@
 // prisma/seed.js
-// Seeding: roles + categories
+// Seeding: roles + categories + providers + products + pricing rules
 // Run with: npx prisma db seed
 
 const { PrismaClient } = require("@prisma/client");
@@ -55,56 +55,113 @@ async function main() {
   console.log("→ Seeding providers...");
 
   const providers = [
-    {
-      name:         "SME API",
-      providerType: "VTU",
-      priority:     1,
-      active:       true,
-      config:       {},
-    },
-    {
-      name:         "VTU.ng",
-      providerType: "VTU",
-      priority:     2,
-      active:       true,
-      config:       {},
-    },
-    {
-      name:         "Termii",
-      providerType: "SMS",
-      priority:     1,
-      active:       true,
-      config:       {},
-    },
-    {
-      name:         "Airalo",
-      providerType: "ESIM",
-      priority:     1,
-      active:       true,
-      config:       {},
-    },
+    { name: "SME API", providerType: "VTU",  priority: 1, active: true, config: {} },
+    { name: "VTU.ng",  providerType: "VTU",  priority: 2, active: true, config: {} },
+    { name: "Termii",  providerType: "SMS",  priority: 1, active: true, config: {} },
+    { name: "Airalo",  providerType: "ESIM", priority: 1, active: true, config: {} },
   ];
 
   for (const provider of providers) {
-    const existing = await prisma.provider.findFirst({
-      where: { name: provider.name },
-    });
+    let existing = await prisma.provider.findFirst({ where: { name: provider.name } });
 
     if (!existing) {
-      await prisma.provider.create({ data: provider });
-
-      // seed provider_health row alongside each provider
-      const created = await prisma.provider.findFirst({
-        where: { name: provider.name },
-      });
-
-      await prisma.providerHealth.create({
-        data: { providerId: created.id },
-      });
+      existing = await prisma.provider.create({ data: provider });
+      await prisma.providerHealth.create({ data: { providerId: existing.id } });
     }
   }
 
   console.log("✓ Providers seeded");
+
+  // ─── Products & Pricing ─────────────────────────────────────
+  console.log("→ Seeding products and pricing rules...");
+
+  const airtimeCategory     = await prisma.category.findUnique({ where: { slug: "airtime" } });
+  const dataCategory        = await prisma.category.findUnique({ where: { slug: "data" } });
+  const electricityCategory = await prisma.category.findUnique({ where: { slug: "electricity" } });
+  const tvCategory          = await prisma.category.findUnique({ where: { slug: "cable-tv" } });
+
+  const customerRole = await prisma.role.findUnique({ where: { name: "CUSTOMER" } });
+  const resellerRole = await prisma.role.findUnique({ where: { name: "RESELLER" } });
+  const agentRole    = await prisma.role.findUnique({ where: { name: "AGENT" } });
+  const roleByName   = { CUSTOMER: customerRole, RESELLER: resellerRole, AGENT: agentRole };
+
+  // ELECTRICITY entries price a flat convenience fee, not the bill itself —
+  // see the Phase 4 order service notes for why (DISCOs don't have fixed
+  // "products" the way data bundles or TV bouquets do).
+  const catalog = [
+    {
+      categoryId: airtimeCategory.id,
+      name: "MTN Airtime ₦100",
+      code: "MTN-AIRTIME-100",
+      providerCost: 98,
+      metadata: { network: "MTN", denomination: 100 },
+      pricing: { CUSTOMER: 100, RESELLER: 99, AGENT: 98.5 },
+    },
+    {
+      categoryId: airtimeCategory.id,
+      name: "MTN Airtime ₦200",
+      code: "MTN-AIRTIME-200",
+      providerCost: 196,
+      metadata: { network: "MTN", denomination: 200 },
+      pricing: { CUSTOMER: 200, RESELLER: 198, AGENT: 197 },
+    },
+    {
+      categoryId: dataCategory.id,
+      name: "MTN 1GB - 30 Days",
+      code: "MTN-DATA-1GB-30D",
+      providerCost: 280,
+      metadata: { network: "MTN", planCode: "MTN-1GB-30", validity: "30 days" },
+      pricing: { CUSTOMER: 300, RESELLER: 290, AGENT: 285 },
+    },
+    {
+      categoryId: tvCategory.id,
+      name: "DStv Compact",
+      code: "DSTV-COMPACT",
+      providerCost: 18500,
+      metadata: { provider: "DSTV", bouquetCode: "COMPACT" },
+      pricing: { CUSTOMER: 19000, RESELLER: 18700, AGENT: 18600 },
+    },
+    {
+      categoryId: electricityCategory.id,
+      name: "Ikeja Electric Prepaid",
+      code: "IKEDC-PREPAID",
+      providerCost: 0,
+      metadata: { disco: "IKEDC", meterType: "PREPAID" },
+      pricing: { CUSTOMER: 100, RESELLER: 80, AGENT: 70 }, // flat convenience fee
+    },
+  ];
+
+  for (const item of catalog) {
+    const product = await prisma.product.upsert({
+      where: { code: item.code },
+      update: {
+        name: item.name,
+        categoryId: item.categoryId,
+        providerCost: item.providerCost,
+        metadata: item.metadata,
+        active: true,
+      },
+      create: {
+        name: item.name,
+        code: item.code,
+        categoryId: item.categoryId,
+        providerCost: item.providerCost,
+        metadata: item.metadata,
+        active: true,
+      },
+    });
+
+    for (const [roleName, price] of Object.entries(item.pricing)) {
+      const role = roleByName[roleName];
+      await prisma.pricingRule.upsert({
+        where: { productId_roleId: { productId: product.id, roleId: role.id } },
+        update: { sellingPrice: price },
+        create: { productId: product.id, roleId: role.id, sellingPrice: price },
+      });
+    }
+  }
+
+  console.log("✓ Products and pricing rules seeded");
 
   console.log("\n✅ Database seeded successfully");
 }

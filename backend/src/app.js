@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const authRoutes = require("./modules/auth/auth.routes");
 const walletRoutes = require("./modules/wallets/wallet.routes");
 const webhookRoutes = require("./modules/wallets/webhook.routes");
+const orderRoutes = require("./modules/orders/order.routes");
 const { generalLimiter } = require("./common/middleware/rateLimiter");
 const notFound = require("./common/middleware/notFound");
 const errorHandler = require("./common/middleware/errorHandler");
@@ -40,6 +41,7 @@ app.get("/health", (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/wallet", walletRoutes);
 app.use("/api/v1/webhooks", webhookRoutes);
+app.use("/api/v1/orders", orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
