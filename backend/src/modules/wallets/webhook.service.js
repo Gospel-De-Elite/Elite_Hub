@@ -2,6 +2,7 @@ const { Prisma } = require("@prisma/client");
 const prisma = require("../../common/config/prisma");
 const ApiError = require("../../common/errors/ApiError");
 const walletService = require("./wallet.service");
+const referralService = require("../referrals/referral.service");
 const { notificationQueue } = require("../../queues");
 const logger = require("../../common/utils/logger");
 
@@ -60,10 +61,13 @@ async function creditFromGatewayConfirmation({ gateway, gatewayReference, amount
       },
     });
 
-    // TODO (Phase 5 — Referral Engine): if this is the referred user's first
-    // SUCCESS funding and amount >= NGN 2,000, trigger the referrer's reward here.
-
-    return { credited: true, credit, userId: paymentTxn.userId, amount };
+    return {
+      credited: true,
+      credit,
+      userId: paymentTxn.userId,
+      walletId: credit.transaction.walletId,
+      amount,
+    };
   });
 
   if (result.credited) {
@@ -73,6 +77,19 @@ async function creditFromGatewayConfirmation({ gateway, gatewayReference, amount
       title: "Wallet Funded",
       body: `Your wallet has been credited with NGN ${result.amount}.`,
     });
+
+    // Deliberately outside the funding transaction and wrapped in its own
+    // try/catch — a referral-engine bug must never roll back or block the
+    // user's own successful wallet funding.
+    try {
+      await referralService.checkAndRewardReferral({
+        userId: result.userId,
+        walletId: result.walletId,
+        amount: result.amount,
+      });
+    } catch (error) {
+      logger.error(`Referral reward check failed for user ${result.userId}: ${error.message}`);
+    }
   }
 
   return result;

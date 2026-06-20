@@ -4,6 +4,7 @@ const prisma = require("../../common/config/prisma");
 const ApiError = require("../../common/errors/ApiError");
 const walletService = require("../wallets/wallet.service");
 const providerService = require("../providers/provider.service");
+const catalogCache = require("../pricing/catalog.cache");
 const { notificationQueue, reconciliationQueue } = require("../../queues");
 const logger = require("../../common/utils/logger");
 
@@ -21,17 +22,7 @@ function generateOrderReference() {
 }
 
 async function getPricingForRole(productId, roleName) {
-  let rule = await prisma.pricingRule.findFirst({
-    where: { productId, role: { name: roleName } },
-  });
-
-  if (!rule) {
-    // No role-specific rule configured — fall back to CUSTOMER pricing
-    // rather than blocking the purchase entirely.
-    rule = await prisma.pricingRule.findFirst({
-      where: { productId, role: { name: "CUSTOMER" } },
-    });
-  }
+  const rule = await catalogCache.getSellingPrice(productId, roleName);
 
   if (!rule) {
     throw ApiError.badRequest("No pricing configured for this product");
@@ -97,10 +88,7 @@ function buildProviderPayload({ orderType, product, details }) {
 }
 
 async function createOrder({ userId, userRole, orderType, productId, details }) {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: { category: true },
-  });
+  const product = await catalogCache.getProduct(productId);
 
   if (!product || !product.active) {
     throw ApiError.notFound("Product not found or inactive");
