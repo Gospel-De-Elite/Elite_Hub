@@ -79,6 +79,7 @@ async function main() {
   const dataCategory        = await prisma.category.findUnique({ where: { slug: "data" } });
   const electricityCategory = await prisma.category.findUnique({ where: { slug: "electricity" } });
   const tvCategory          = await prisma.category.findUnique({ where: { slug: "cable-tv" } });
+  const smsCategory         = await prisma.category.findUnique({ where: { slug: "sms" } });
 
   const customerRole = await prisma.role.findUnique({ where: { name: "CUSTOMER" } });
   const resellerRole = await prisma.role.findUnique({ where: { name: "RESELLER" } });
@@ -86,8 +87,9 @@ async function main() {
   const roleByName   = { CUSTOMER: customerRole, RESELLER: resellerRole, AGENT: agentRole };
 
   // ELECTRICITY entries price a flat convenience fee, not the bill itself —
-  // see the Phase 4 order service notes for why (DISCOs don't have fixed
-  // "products" the way data bundles or TV bouquets do).
+  // see the Phase 4 order service notes for why. SMS entries are credit
+  // bundles — `metadata.credits` is how many units get added to the
+  // sms_wallets row on purchase.
   const catalog = [
     {
       categoryId: airtimeCategory.id,
@@ -128,6 +130,30 @@ async function main() {
       providerCost: 0,
       metadata: { disco: "IKEDC", meterType: "PREPAID" },
       pricing: { CUSTOMER: 100, RESELLER: 80, AGENT: 70 }, // flat convenience fee
+    },
+    {
+      categoryId: smsCategory.id,
+      name: "100 SMS Units",
+      code: "SMS-100",
+      providerCost: 320,
+      metadata: { credits: 100 },
+      pricing: { CUSTOMER: 400, RESELLER: 380, AGENT: 370 },
+    },
+    {
+      categoryId: smsCategory.id,
+      name: "500 SMS Units",
+      code: "SMS-500",
+      providerCost: 1600,
+      metadata: { credits: 500 },
+      pricing: { CUSTOMER: 2000, RESELLER: 1900, AGENT: 1850 },
+    },
+    {
+      categoryId: smsCategory.id,
+      name: "1000 SMS Units",
+      code: "SMS-1000",
+      providerCost: 3200,
+      metadata: { credits: 1000 },
+      pricing: { CUSTOMER: 3800, RESELLER: 3600, AGENT: 3500 },
     },
   ];
 

@@ -10,10 +10,14 @@ const {
   verifyRefreshToken,
 } = require("../../common/utils/jwt");
 
-// Actual crediting of this reward happens in Phase 5 (Referral Engine) only
-// once the referred user's first wallet funding hits >= NGN 2,000.
+// Actual crediting of this reward happens in the referral engine (Phase 5)
+// only once the referred user's first funding is confirmed.
 const REFERRAL_REWARD_AMOUNT = 100;
 const REFRESH_TOKEN_TTL_DAYS = 30;
+
+// Shared platform default — every user sends under this until/unless they
+// get a custom sender ID approved through the full two-layer workflow.
+const DEFAULT_SENDER_ID = "EliteHub";
 
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -98,8 +102,20 @@ async function register(data, meta = {}) {
     // Wallet-first platform — every user gets a wallet immediately, balance 0.
     await tx.wallet.create({ data: { userId: created.id } });
 
+    // Every user gets a temporary default sender ID immediately, per the
+    // addendum — custom sender IDs go through the full approval workflow,
+    // but nobody is ever blocked from sending in the meantime.
+    await tx.senderId.create({
+      data: {
+        userId: created.id,
+        senderId: DEFAULT_SENDER_ID,
+        isDefault: true,
+        status: "DEFAULT",
+      },
+    });
+
     // Pending referral record. `rewarded` flips to true only when the
-    // referral engine (Phase 5) confirms qualifying funding.
+    // referral engine confirms qualifying funding.
     if (referrer) {
       await tx.referral.create({
         data: {

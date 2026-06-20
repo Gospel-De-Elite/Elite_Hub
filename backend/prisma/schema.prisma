@@ -68,6 +68,7 @@ enum OrderType {
   ELECTRICITY
   TV
   ESIM
+  SMS_CREDIT
 }
 
 enum ProviderType {
