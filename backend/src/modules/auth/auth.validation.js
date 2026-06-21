@@ -22,4 +22,19 @@ const refreshValidation = [
   body("refreshToken").notEmpty().withMessage("Refresh token is required"),
 ];
 
-module.exports = { registerValidation, loginValidation, refreshValidation };
+const forgotPasswordValidation = [
+  body("email").isEmail().withMessage("A valid email is required").normalizeEmail(),
+];
+
+const resetPasswordValidation = [
+  body("token").notEmpty().withMessage("Reset token is required"),
+  body("newPassword").isLength({ min: 8 }).withMessage("Password must be at least 8 characters"),
+];
+
+module.exports = {
+  registerValidation,
+  loginValidation,
+  refreshValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
+};

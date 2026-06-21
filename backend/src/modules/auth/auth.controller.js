@@ -33,4 +33,17 @@ const logoutAll = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, message: "Logged out from all devices" });
 });
 
-module.exports = { register, login, refresh, logout, logoutAll };
+const forgotPassword = catchAsync(async (req, res) => {
+  const result = await authService.forgotPassword(req.body.email);
+  res.status(200).json({ success: true, data: result });
+});
+
+const resetPassword = catchAsync(async (req, res) => {
+  const result = await authService.resetPassword({
+    token: req.body.token,
+    newPassword: req.body.newPassword,
+  });
+  res.status(200).json({ success: true, data: result });
+});
+
+module.exports = { register, login, refresh, logout, logoutAll, forgotPassword, resetPassword };

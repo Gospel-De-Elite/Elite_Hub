@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Theme tokens converted from the landing page spec's hex palette into the
+  HSL triplets shadcn's component patterns expect:
+    --background  <- #0B1220 (primary background)
+    --secondary   <- #121A2A (secondary surface)
+    --card        <- #1B2435 (card surface)
+    --primary     <- #26A7EF (brand blue)
+    --muted-fg    <- #94A3B8 (secondary text)
+  This keeps the dashboard visually consistent with the marketing site
+  rather than inventing a second, unrelated palette.
+*/
+@layer base {
+  :root {
+    --background: 220 39% 7%;
+    --foreground: 0 0% 100%;
+    --card: 220 30% 16%;
+    --card-foreground: 0 0% 100%;
+    --primary: 202 84% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 35% 11%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 30% 16%;
+    --muted-foreground: 215 16% 65%;
+    --border: 220 25% 20%;
+    --input: 220 25% 20%;
+    --ring: 202 84% 56%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
+  }
+}

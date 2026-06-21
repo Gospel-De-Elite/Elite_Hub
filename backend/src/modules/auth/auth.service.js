@@ -14,6 +14,7 @@ const {
 // only once the referred user's first funding is confirmed.
 const REFERRAL_REWARD_AMOUNT = 100;
 const REFRESH_TOKEN_TTL_DAYS = 30;
+const RESET_TOKEN_TTL_MINUTES = 30;
 
 // Shared platform default — every user sends under this until/unless they
 // get a custom sender ID approved through the full two-layer workflow.
@@ -228,4 +229,80 @@ async function logoutAll(userId) {
   });
 }
 
-module.exports = { register, login, refresh, logout, logoutAll };
+/**
+ * Always returns the same generic message regardless of whether the email
+ * exists — prevents account enumeration via response content/timing.
+ *
+ * No email provider exists anywhere in this platform yet — in non-production
+ * environments, the raw token is returned directly in the response so this
+ * flow can be tested end-to-end. This MUST be wired to real email delivery
+ * before launch; devOnlyResetToken must never ship in a production response.
+ */
+async function forgotPassword(email) {
+  const genericResponse = { message: "If that email exists, a reset link has been sent." };
+
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return genericResponse;
+  }
+
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data: { userId: user.id, tokenHash, expiresAt },
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    return { ...genericResponse, devOnlyResetToken: rawToken };
+  }
+
+  return genericResponse;
+}
+
+async function resetPassword({ token, newPassword }) {
+  const tokenHash = hashToken(token);
+
+  const resetRecord = await prisma.passwordResetToken.findFirst({
+    where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+  });
+
+  if (!resetRecord) {
+    throw ApiError.badRequest("Invalid or expired reset token");
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: resetRecord.userId }, data: { passwordHash } });
+    await tx.passwordResetToken.update({ where: { id: resetRecord.id }, data: { usedAt: new Date() } });
+
+    // Security: a password reset invalidates every existing session, not
+    // just the device that requested it — if credentials were compromised,
+    // any already-issued refresh token should die here too.
+    await tx.refreshToken.updateMany({
+      where: { userId: resetRecord.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  });
+
+  await logAudit({
+    actorId: resetRecord.userId,
+    action: "PASSWORD_RESET",
+    entityType: "User",
+    entityId: resetRecord.userId,
+  });
+
+  return { message: "Password has been reset successfully. Please log in again." };
+}
+
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  forgotPassword,
+  resetPassword,
+};
