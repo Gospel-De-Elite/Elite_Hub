@@ -246,6 +246,17 @@ async function getOrder(userId, orderId) {
   return order;
 }
 
+/**
+ * Lookup by the human-readable reference rather than the internal UUID —
+ * used by the public API's status-check endpoint, since that's the
+ * identifier a third-party integrator actually tracks on their own side.
+ */
+async function getOrderByReference(userId, reference) {
+  const order = await prisma.order.findFirst({ where: { reference, userId } });
+  if (!order) throw ApiError.notFound("Order not found");
+  return order;
+}
+
 async function listOrders(userId, { page = 1, limit = 20, status } = {}) {
   const skip = (page - 1) * limit;
   const where = { userId, ...(status ? { status } : {}) };
@@ -258,4 +269,4 @@ async function listOrders(userId, { page = 1, limit = 20, status } = {}) {
   return { orders, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
 }
 
-module.exports = { createOrder, getOrder, listOrders, generateOrderReference };
+module.exports = { createOrder, getOrder, getOrderByReference, listOrders, generateOrderReference };

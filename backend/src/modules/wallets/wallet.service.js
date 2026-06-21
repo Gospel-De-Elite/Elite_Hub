@@ -63,8 +63,9 @@ async function getTransactionHistory(userId, { page = 1, limit = 20 } = {}) {
 
 /**
  * Credits a wallet — used for funding (CREDIT), referral payouts (BONUS),
- * and refunds (REFUND). Pass an existing `tx` to run as part of a larger
- * transaction (e.g. from the webhook handler); omit it to run standalone.
+ * refunds (REFUND), and admin overrides (BONUS). Pass an existing `tx` to
+ * run as part of a larger transaction (e.g. from the webhook handler);
+ * omit it to run standalone.
  */
 async function creditWallet(
   { userId, amount, type = "CREDIT", reference, description, metadata },
@@ -237,6 +238,51 @@ async function settleDebit({ userId, amount, reference, description, metadata })
   });
 }
 
+/**
+ * Direct debit with no prior lock — used only for admin financial
+ * overrides (see modules/admin/userManagement.service.js), where there's
+ * no order or lock to settle against. Unlike settleDebit, this only ever
+ * touches `balance`, never `lockedBalance`.
+ */
+async function manualDebit({ userId, amount, reference, description, metadata }) {
+  const amountDecimal = new Prisma.Decimal(amount);
+  if (amountDecimal.lte(0)) {
+    throw ApiError.badRequest("Debit amount must be greater than zero");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const wallet = await lockWalletRow(tx, userId);
+
+    if (wallet.balance.lt(amountDecimal)) {
+      throw ApiError.badRequest("Insufficient wallet balance for this debit");
+    }
+
+    const balanceBefore = wallet.balance;
+    const balanceAfter = balanceBefore.minus(amountDecimal);
+
+    await tx.wallet.update({
+      where: { id: wallet.id },
+      data: { balance: balanceAfter },
+    });
+
+    const transaction = await tx.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        transactionType: "DEBIT",
+        amount: amountDecimal,
+        balanceBefore,
+        balanceAfter,
+        reference,
+        status: "SUCCESS",
+        description,
+        metadata,
+      },
+    });
+
+    return { balanceBefore, balanceAfter, transaction };
+  });
+}
+
 module.exports = {
   getWallet,
   getTransactionHistory,
@@ -245,4 +291,5 @@ module.exports = {
   lockFunds,
   releaseLock,
   settleDebit,
+  manualDebit,
 };

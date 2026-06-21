@@ -14,6 +14,8 @@ const required = [
   "VTUNG_API_KEY",
   "VTUNG_BASE_URL",
   "TERMII_API_KEY",
+  "AIRALO_CLIENT_ID",
+  "AIRALO_CLIENT_SECRET",
 ];
 
 for (const key of required) {
@@ -61,5 +63,11 @@ module.exports = {
   termii: {
     apiKey: process.env.TERMII_API_KEY,
     baseUrl: process.env.TERMII_BASE_URL || "https://api.ng.termii.com",
+  },
+
+  airalo: {
+    clientId: process.env.AIRALO_CLIENT_ID,
+    clientSecret: process.env.AIRALO_CLIENT_SECRET,
+    baseUrl: process.env.AIRALO_BASE_URL || "https://sandbox-partners-api.airalo.com",
   },
 };

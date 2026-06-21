@@ -1,6 +1,7 @@
 const prisma = require("../../common/config/prisma");
 const ApiError = require("../../common/errors/ApiError");
 const { smsQueue } = require("../../queues");
+const termiiClient = require("./clients/termii.client");
 
 /**
  * Atomic, race-safe decrement — a single UPDATE with a guarding WHERE
@@ -121,6 +122,35 @@ async function getCampaign(userId, campaignId) {
   return campaign;
 }
 
+/**
+ * Single transactional send for the public Developer API — distinct from
+ * createCampaign above. A developer calling this expects a prompt,
+ * definitive success/fail answer (e.g. an OTP flow), so this calls Termii
+ * synchronously and refunds the 1 credit immediately on failure, rather
+ * than queuing it the way dashboard bulk campaigns do.
+ */
+async function sendSingleSms({ userId, recipient, message }) {
+  await deductCredits(userId, 1);
+  const senderId = await resolveSenderId(userId);
+
+  try {
+    const result = await termiiClient.sendSms({ to: recipient, from: senderId.value, sms: message });
+
+    if (!result.success) {
+      await refundCredits(userId, 1);
+    }
+
+    return {
+      success: result.success,
+      providerMessageId: result.providerMessageId,
+      usedSenderId: senderId.value,
+    };
+  } catch (error) {
+    await refundCredits(userId, 1);
+    throw ApiError.internal("SMS provider error — credit refunded");
+  }
+}
+
 module.exports = {
   deductCredits,
   refundCredits,
@@ -129,4 +159,5 @@ module.exports = {
   cancelCampaign,
   listCampaigns,
   getCampaign,
+  sendSingleSms,
 };
