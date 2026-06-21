@@ -730,10 +730,9 @@ model ApiKey {
   apiKey        String       @unique @map("api_key") @db.Text
   apiSecretHash String       @map("api_secret_hash") @db.Text
   label         String?      @db.VarChar(100)
+  webhookUrl    String?      @map("webhook_url") @db.Text
   status        ApiKeyStatus @default(ACTIVE)
   lastUsedAt    DateTime?    @map("last_used_at") @db.Timestamptz
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   user      User          @relation(fields: [userId], references: [id])
