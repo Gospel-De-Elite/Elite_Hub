@@ -23,6 +23,7 @@ const userManagementRoutes = require("./modules/admin/userManagement.routes");
 const auditLogRoutes = require("./modules/admin/auditLog.routes");
 const analyticsRoutes = require("./modules/admin/analytics.routes");
 const providerAdminRoutes = require("./modules/providers/providerAdmin.routes");
+const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 const { generalLimiter } = require("./common/middleware/rateLimiter");
 const notFound = require("./common/middleware/notFound");
 const errorHandler = require("./common/middleware/errorHandler");
@@ -67,12 +68,9 @@ app.use("/api/v1/sms/campaigns", campaignRoutes);
 app.use("/api/v1/sms/sender-ids", senderIdRoutes);
 app.use("/api/v1/esim", esimRoutes);
 app.use("/api/v1/developer/api-keys", apiKeyRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
 
-// Admin surface — note pricing moved from the old bare "/api/v1/admin"
-// mount to "/api/v1/admin/pricing" (Phase 9 cleanup): the bare prefix meant
-// every request to any newer /api/v1/admin/* route silently passed through
-// pricing's auth middleware redundantly first. Harmless, but worth fixing
-// now before more admin routes pile up on top of it.
+// Admin surface
 app.use("/api/v1/admin/pricing", pricingAdminRoutes);
 app.use("/api/v1/admin/role-upgrades", roleUpgradeAdminRoutes);
 app.use("/api/v1/admin/sender-id-requests", senderIdAdminRoutes);
@@ -83,9 +81,6 @@ app.use("/api/v1/admin/analytics", analyticsRoutes);
 app.use("/api/v1/admin/providers", providerAdminRoutes);
 
 // The public Developer API surface — API-key authenticated, not JWT.
-// Deliberately a separate prefix from everything above: a stable,
-// versioned contract third parties depend on, distinct from the
-// dashboard's internal endpoints which can evolve freely.
 app.use("/api/v1/public", publicApiRoutes);
 
 app.use(notFound);

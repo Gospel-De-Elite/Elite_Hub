@@ -297,6 +297,12 @@ async function resetPassword({ token, newPassword }) {
   return { message: "Password has been reset successfully. Please log in again." };
 }
 
+async function getCurrentUser(userId) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: true } });
+  if (!user) throw ApiError.notFound("User not found");
+  return sanitizeUser(user);
+}
+
 module.exports = {
   register,
   login,
@@ -305,4 +311,5 @@ module.exports = {
   logoutAll,
   forgotPassword,
   resetPassword,
+  getCurrentUser,
 };

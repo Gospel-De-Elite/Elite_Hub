@@ -46,4 +46,18 @@ const resetPassword = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
-module.exports = { register, login, refresh, logout, logoutAll, forgotPassword, resetPassword };
+const getCurrentUser = catchAsync(async (req, res) => {
+  const user = await authService.getCurrentUser(req.user.id);
+  res.status(200).json({ success: true, data: user });
+});
+
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  forgotPassword,
+  resetPassword,
+  getCurrentUser,
+};
