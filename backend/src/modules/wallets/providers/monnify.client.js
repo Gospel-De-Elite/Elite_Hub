@@ -39,7 +39,11 @@ async function initializeTransaction({ amount, customerName, customerEmail, paym
       paymentDescription: "Elite Hub wallet funding",
       currencyCode: "NGN",
       contractCode: env.monnify.contractCode,
-      redirectUrl: `${env.appUrl}/wallet/fund/callback`,
+      // FIX: this was pointing at env.appUrl (the backend, port 5000) —
+      // the backend serves no UI, so a real payment would have redirected
+      // the user to a dead end. Monnify appends ?paymentReference=...
+      // automatically, matching the reference we generated.
+      redirectUrl: `${env.frontendUrl}/dashboard/wallet/callback`,
     },
     { headers: { Authorization: `Bearer ${token}` } }
   );

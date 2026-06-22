@@ -28,6 +28,10 @@ module.exports = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: parseInt(process.env.PORT, 10) || 5000,
   appUrl: process.env.APP_URL || "http://localhost:5000",
+  // Where gateway hosted-payment pages redirect the user BACK to — this is
+  // the frontend SPA, never the backend API, since the backend has no UI
+  // to show them. Defaults to the local Vite dev server port.
+  frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,

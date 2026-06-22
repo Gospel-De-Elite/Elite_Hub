@@ -15,6 +15,11 @@ async function initializeTransaction({ email, amount, reference }) {
     email,
     amount: Math.round(Number(amount) * 100), // naira -> kobo
     reference,
+    // Without this, Paystack falls back to whatever default callback URL
+    // (if any) is set in the merchant dashboard — which has no reason to
+    // point at this specific frontend. Paystack appends ?reference=...
+    // automatically, and that value is exactly the reference we generated.
+    callback_url: `${env.frontendUrl}/dashboard/wallet/callback`,
   });
   return response.data;
 }

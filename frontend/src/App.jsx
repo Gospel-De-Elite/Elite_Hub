@@ -6,6 +6,10 @@ import ResetPasswordPage from "@/features/auth/ResetPasswordPage";
 import ProtectedRoute from "@/components/layouts/ProtectedRoute";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import DashboardHomePage from "@/features/dashboard/DashboardHomePage";
+import WalletOverviewPage from "@/features/wallet/WalletOverviewPage";
+import WalletFundingPage from "@/features/wallet/WalletFundingPage";
+import WalletCallbackPage from "@/features/wallet/WalletCallbackPage";
+import WalletTransactionsPage from "@/features/wallet/WalletTransactionsPage";
 import ComingSoonPage from "@/components/common/ComingSoonPage";
 
 export default function App() {
@@ -25,8 +29,12 @@ export default function App() {
         }
       >
         <Route index element={<DashboardHomePage />} />
-        <Route path="wallet" element={<ComingSoonPage title="Wallet" />} />
-        <Route path="wallet/fund" element={<ComingSoonPage title="Fund Wallet" />} />
+
+        <Route path="wallet" element={<WalletOverviewPage />} />
+        <Route path="wallet/fund" element={<WalletFundingPage />} />
+        <Route path="wallet/callback" element={<WalletCallbackPage />} />
+        <Route path="wallet/transactions" element={<WalletTransactionsPage />} />
+
         <Route path="airtime" element={<ComingSoonPage title="Buy Airtime" />} />
         <Route path="data" element={<ComingSoonPage title="Buy Data" />} />
         <Route path="bills" element={<ComingSoonPage title="Pay Bills" />} />
