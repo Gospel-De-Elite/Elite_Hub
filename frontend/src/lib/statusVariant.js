@@ -19,6 +19,8 @@ export function getStatusVariant(status) {
     case "SCHEDULED":
     case "QUEUED":
     case "SENDING":
+    case "ADMIN_APPROVED":
+    case "SUBMITTED_TO_CARRIER":
       return "warning";
     default:
       return "default";

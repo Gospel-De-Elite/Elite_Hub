@@ -14,6 +14,12 @@ import AirtimePurchasePage from "@/features/airtime/AirtimePurchasePage";
 import DataPurchasePage from "@/features/data/DataPurchasePage";
 import BillsPage from "@/features/bills/BillsPage";
 import OrdersPage from "@/features/orders/OrdersPage";
+import SmsDashboardPage from "@/features/sms/SmsDashboardPage";
+import SmsBuyCreditsPage from "@/features/sms/SmsBuyCreditsPage";
+import CampaignsListPage from "@/features/sms/CampaignsListPage";
+import NewCampaignPage from "@/features/sms/NewCampaignPage";
+import CampaignDetailPage from "@/features/sms/CampaignDetailPage";
+import SenderIdsPage from "@/features/sms/SenderIdsPage";
 import ComingSoonPage from "@/components/common/ComingSoonPage";
 
 export default function App() {
@@ -44,9 +50,13 @@ export default function App() {
         <Route path="bills" element={<BillsPage />} />
         <Route path="orders" element={<OrdersPage />} />
 
-        <Route path="sms" element={<ComingSoonPage title="SMS" />} />
-        <Route path="sms/campaigns" element={<ComingSoonPage title="SMS Campaigns" />} />
-        <Route path="sms/sender-ids" element={<ComingSoonPage title="Sender IDs" />} />
+        <Route path="sms" element={<SmsDashboardPage />} />
+        <Route path="sms/buy-credits" element={<SmsBuyCreditsPage />} />
+        <Route path="sms/campaigns" element={<CampaignsListPage />} />
+        <Route path="sms/campaigns/new" element={<NewCampaignPage />} />
+        <Route path="sms/campaigns/:id" element={<CampaignDetailPage />} />
+        <Route path="sms/sender-ids" element={<SenderIdsPage />} />
+
         <Route path="esim" element={<ComingSoonPage title="eSIM Marketplace" />} />
         <Route path="esim/orders" element={<ComingSoonPage title="eSIM Orders" />} />
         <Route path="api" element={<ComingSoonPage title="Developer API" />} />
