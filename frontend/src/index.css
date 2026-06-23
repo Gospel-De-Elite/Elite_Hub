@@ -3,18 +3,35 @@
 @tailwind utilities;
 
 /*
-  Theme tokens converted from the landing page spec's hex palette into the
-  HSL triplets shadcn's component patterns expect:
-    --background  <- #0B1220 (primary background)
-    --secondary   <- #121A2A (secondary surface)
-    --card        <- #1B2435 (card surface)
-    --primary     <- #26A7EF (brand blue)
-    --muted-fg    <- #94A3B8 (secondary text)
-  This keeps the dashboard visually consistent with the marketing site
-  rather than inventing a second, unrelated palette.
+  Light mode is the default (:root). Dark mode overrides via the .dark
+  class, toggled by ThemeProvider. Dark values are the original palette
+  from the landing page spec; light values are a deliberate re-design for
+  light backgrounds, not a naive inversion — same brand blue hue throughout,
+  surfaces and text re-balanced for contrast on white instead of navy.
 */
 @layer base {
   :root {
+    --background: 210 20% 98%;
+    --foreground: 220 39% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 39% 11%;
+    --primary: 202 84% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 220 39% 11%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 16% 42%;
+    --border: 214 20% 87%;
+    --input: 214 20% 87%;
+    --ring: 202 84% 48%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Original dark fintech palette from the landing page spec:
+       #0B1220 background, #121A2A secondary, #1B2435 card, #26A7EF primary */
     --background: 220 39% 7%;
     --foreground: 0 0% 100%;
     --card: 220 30% 16%;
@@ -30,7 +47,6 @@
     --ring: 202 84% 56%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --radius: 0.75rem;
   }
 }
 
@@ -39,7 +55,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans transition-colors duration-200;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   h1,

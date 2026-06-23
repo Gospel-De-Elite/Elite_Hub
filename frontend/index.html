@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Elite Hub</title>
+
+    <!--
+      Runs synchronously before React mounts, so the correct theme class is
+      already on <html> before first paint — without this, the page would
+      flash the wrong theme for a frame on every load.
+    -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem("eh_theme");
+        var theme = ["light", "dark", "system"].indexOf(stored) !== -1 ? stored : "system";
+        var resolved =
+          theme === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : theme;
+        document.documentElement.classList.add(resolved);
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

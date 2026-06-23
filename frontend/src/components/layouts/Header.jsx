@@ -4,6 +4,7 @@ import { Bell, Wallet, LogOut, User as UserIcon } from "lucide-react";
 import { clearAuth } from "@/features/auth/authSlice";
 import { clearProfile } from "@/features/user/userSlice";
 import { clearWallet } from "@/features/wallet/walletSlice";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -39,7 +40,9 @@ export default function Header() {
         <span className="text-sm font-semibold text-foreground">{formatNaira(wallet.spendableBalance)}</span>
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+
         <Link
           to="/dashboard/notifications"
           className="relative rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"

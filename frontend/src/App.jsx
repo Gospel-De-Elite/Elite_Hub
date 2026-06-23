@@ -10,6 +10,10 @@ import WalletOverviewPage from "@/features/wallet/WalletOverviewPage";
 import WalletFundingPage from "@/features/wallet/WalletFundingPage";
 import WalletCallbackPage from "@/features/wallet/WalletCallbackPage";
 import WalletTransactionsPage from "@/features/wallet/WalletTransactionsPage";
+import AirtimePurchasePage from "@/features/airtime/AirtimePurchasePage";
+import DataPurchasePage from "@/features/data/DataPurchasePage";
+import BillsPage from "@/features/bills/BillsPage";
+import OrdersPage from "@/features/orders/OrdersPage";
 import ComingSoonPage from "@/components/common/ComingSoonPage";
 
 export default function App() {
@@ -35,10 +39,11 @@ export default function App() {
         <Route path="wallet/callback" element={<WalletCallbackPage />} />
         <Route path="wallet/transactions" element={<WalletTransactionsPage />} />
 
-        <Route path="airtime" element={<ComingSoonPage title="Buy Airtime" />} />
-        <Route path="data" element={<ComingSoonPage title="Buy Data" />} />
-        <Route path="bills" element={<ComingSoonPage title="Pay Bills" />} />
-        <Route path="orders" element={<ComingSoonPage title="Orders" />} />
+        <Route path="airtime" element={<AirtimePurchasePage />} />
+        <Route path="data" element={<DataPurchasePage />} />
+        <Route path="bills" element={<BillsPage />} />
+        <Route path="orders" element={<OrdersPage />} />
+
         <Route path="sms" element={<ComingSoonPage title="SMS" />} />
         <Route path="sms/campaigns" element={<ComingSoonPage title="SMS Campaigns" />} />
         <Route path="sms/sender-ids" element={<ComingSoonPage title="Sender IDs" />} />
