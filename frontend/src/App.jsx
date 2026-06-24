@@ -20,6 +20,10 @@ import CampaignsListPage from "@/features/sms/CampaignsListPage";
 import NewCampaignPage from "@/features/sms/NewCampaignPage";
 import CampaignDetailPage from "@/features/sms/CampaignDetailPage";
 import SenderIdsPage from "@/features/sms/SenderIdsPage";
+import EsimCountriesPage from "@/features/esim/EsimCountriesPage";
+import EsimPackagesPage from "@/features/esim/EsimPackagesPage";
+import EsimOrdersPage from "@/features/esim/EsimOrdersPage";
+import EsimOrderDetailPage from "@/features/esim/EsimOrderDetailPage";
 import ComingSoonPage from "@/components/common/ComingSoonPage";
 
 export default function App() {
@@ -57,8 +61,11 @@ export default function App() {
         <Route path="sms/campaigns/:id" element={<CampaignDetailPage />} />
         <Route path="sms/sender-ids" element={<SenderIdsPage />} />
 
-        <Route path="esim" element={<ComingSoonPage title="eSIM Marketplace" />} />
-        <Route path="esim/orders" element={<ComingSoonPage title="eSIM Orders" />} />
+        <Route path="esim" element={<EsimCountriesPage />} />
+        <Route path="esim/packages/:countryCode" element={<EsimPackagesPage />} />
+        <Route path="esim/orders" element={<EsimOrdersPage />} />
+        <Route path="esim/orders/:id" element={<EsimOrderDetailPage />} />
+
         <Route path="api" element={<ComingSoonPage title="Developer API" />} />
         <Route path="api/keys" element={<ComingSoonPage title="API Keys" />} />
         <Route path="api/docs" element={<ComingSoonPage title="API Docs" />} />
