@@ -31,10 +31,16 @@ const resetPasswordValidation = [
   body("newPassword").isLength({ min: 8 }).withMessage("Password must be at least 8 characters"),
 ];
 
+const changePasswordValidation = [
+  body("currentPassword").notEmpty().withMessage("Current password is required"),
+  body("newPassword").isLength({ min: 8 }).withMessage("New password must be at least 8 characters"),
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
   refreshValidation,
   forgotPasswordValidation,
   resetPasswordValidation,
+  changePasswordValidation,
 };

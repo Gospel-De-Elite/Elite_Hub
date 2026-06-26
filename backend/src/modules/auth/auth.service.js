@@ -303,6 +303,44 @@ async function getCurrentUser(userId) {
   return sanitizeUser(user);
 }
 
+/**
+ * Distinct from resetPassword — this is for a user who's currently logged
+ * in and knows their existing password, not someone who's lost access.
+ * Same security posture as a reset though: revokes every refresh token,
+ * since a password that needed changing may have been compromised and
+ * every other session should die, not just continue quietly.
+ */
+async function changePassword({ userId, currentPassword, newPassword }) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.passwordHash) {
+    throw ApiError.badRequest("Cannot change password for this account");
+  }
+
+  const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!matches) {
+    throw ApiError.unauthorized("Current password is incorrect");
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    await tx.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  });
+
+  await logAudit({
+    actorId: userId,
+    action: "PASSWORD_CHANGED",
+    entityType: "User",
+    entityId: userId,
+  });
+
+  return { message: "Password changed successfully." };
+}
+
 module.exports = {
   register,
   login,
@@ -312,4 +350,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getCurrentUser,
+  changePassword,
 };

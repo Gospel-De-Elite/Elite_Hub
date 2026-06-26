@@ -9,6 +9,7 @@ const {
   refreshValidation,
   forgotPasswordValidation,
   resetPasswordValidation,
+  changePasswordValidation,
 } = require("./auth.validation");
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.post("/logout-all", authenticate, controller.logoutAll);
 router.post("/forgot-password", authLimiter, forgotPasswordValidation, validate, controller.forgotPassword);
 router.post("/reset-password", authLimiter, resetPasswordValidation, validate, controller.resetPassword);
 router.get("/me", authenticate, controller.getCurrentUser);
+router.post("/change-password", authenticate, changePasswordValidation, validate, controller.changePassword);
 
 module.exports = router;

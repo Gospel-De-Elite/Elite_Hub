@@ -61,7 +61,12 @@ export default function Header() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>
-              {profile ? `${profile.firstName} ${profile.lastName}` : "Account"}
+              <div>{profile ? `${profile.firstName} ${profile.lastName}` : "Account"}</div>
+              {profile && (
+                <div className="text-xs font-normal text-muted-foreground">
+                  {profile.role.replaceAll("_", " ")}
+                </div>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/dashboard/profile")}>

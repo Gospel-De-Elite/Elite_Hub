@@ -24,6 +24,11 @@ import EsimCountriesPage from "@/features/esim/EsimCountriesPage";
 import EsimPackagesPage from "@/features/esim/EsimPackagesPage";
 import EsimOrdersPage from "@/features/esim/EsimOrdersPage";
 import EsimOrderDetailPage from "@/features/esim/EsimOrderDetailPage";
+import DeveloperOverviewPage from "@/features/developer/DeveloperOverviewPage";
+import ApiKeysPage from "@/features/developer/ApiKeysPage";
+import ApiKeyUsagePage from "@/features/developer/ApiKeyUsagePage";
+import ApiDocsPage from "@/features/developer/ApiDocsPage";
+import ProfilePage from "@/features/profile/ProfilePage";
 import ComingSoonPage from "@/components/common/ComingSoonPage";
 
 export default function App() {
@@ -66,12 +71,13 @@ export default function App() {
         <Route path="esim/orders" element={<EsimOrdersPage />} />
         <Route path="esim/orders/:id" element={<EsimOrderDetailPage />} />
 
-        <Route path="api" element={<ComingSoonPage title="Developer API" />} />
-        <Route path="api/keys" element={<ComingSoonPage title="API Keys" />} />
-        <Route path="api/docs" element={<ComingSoonPage title="API Docs" />} />
+        <Route path="api" element={<DeveloperOverviewPage />} />
+        <Route path="api/keys" element={<ApiKeysPage />} />
+        <Route path="api/keys/:id/usage" element={<ApiKeyUsagePage />} />
+        <Route path="api/docs" element={<ApiDocsPage />} />
         <Route path="referrals" element={<ComingSoonPage title="Referrals" />} />
         <Route path="notifications" element={<ComingSoonPage title="Notifications" />} />
-        <Route path="profile" element={<ComingSoonPage title="Profile" />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
