@@ -31,4 +31,21 @@ const authLimiter = rateLimit({
   message: { success: false, message: "Too many attempts, please try again later." },
 });
 
-module.exports = { generalLimiter, authLimiter };
+// Dedicated limiter for the AI support chat endpoint — keyed per user, not
+// IP, since this is always authenticated. Each message triggers a real
+// Anthropic API call (real cost + latency), so this deserves its own,
+// tighter ceiling rather than relying on the general limiter alone.
+const supportChatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => req.user?.id || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+    prefix: "rl:support:",
+  }),
+  message: { success: false, message: "You're sending messages too quickly. Please slow down." },
+});
+
+module.exports = { generalLimiter, authLimiter, supportChatLimiter };

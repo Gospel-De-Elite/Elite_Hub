@@ -5,6 +5,7 @@ import BottomNav from "./BottomNav";
 import { useCurrentUserQuery } from "@/features/user/useCurrentUserQuery";
 import { useWalletQuery } from "@/features/wallet/useWalletQuery";
 import { useNotificationsQuery } from "@/features/notifications/useNotificationsQuery";
+import SupportWidget from "@/features/support/SupportWidget";
 
 export default function DashboardLayout() {
   // Keeps Redux's user/wallet/notifications slices fresh app-wide — every
@@ -24,6 +25,7 @@ export default function DashboardLayout() {
         </main>
       </div>
       <BottomNav />
+      <SupportWidget />
     </div>
   );
 }

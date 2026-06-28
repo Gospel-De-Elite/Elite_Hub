@@ -24,6 +24,8 @@ const auditLogRoutes = require("./modules/admin/auditLog.routes");
 const analyticsRoutes = require("./modules/admin/analytics.routes");
 const providerAdminRoutes = require("./modules/providers/providerAdmin.routes");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
+const supportRoutes = require("./modules/support/support.routes");
+const supportAdminRoutes = require("./modules/support/supportAdmin.routes");
 const { generalLimiter } = require("./common/middleware/rateLimiter");
 const notFound = require("./common/middleware/notFound");
 const errorHandler = require("./common/middleware/errorHandler");
@@ -69,6 +71,7 @@ app.use("/api/v1/sms/sender-ids", senderIdRoutes);
 app.use("/api/v1/esim", esimRoutes);
 app.use("/api/v1/developer/api-keys", apiKeyRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/support", supportRoutes);
 
 // Admin surface
 app.use("/api/v1/admin/pricing", pricingAdminRoutes);
@@ -79,6 +82,7 @@ app.use("/api/v1/admin/users", userManagementRoutes);
 app.use("/api/v1/admin/audit-logs", auditLogRoutes);
 app.use("/api/v1/admin/analytics", analyticsRoutes);
 app.use("/api/v1/admin/providers", providerAdminRoutes);
+app.use("/api/v1/admin/support", supportAdminRoutes);
 
 // The public Developer API surface — API-key authenticated, not JWT.
 app.use("/api/v1/public", publicApiRoutes);

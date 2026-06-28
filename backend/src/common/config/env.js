@@ -16,6 +16,8 @@ const required = [
   "TERMII_API_KEY",
   "AIRALO_CLIENT_ID",
   "AIRALO_CLIENT_SECRET",
+  "ANTHROPIC_API_KEY",
+  "SUPPORT_WHATSAPP_NUMBER",
 ];
 
 for (const key of required) {
@@ -28,9 +30,6 @@ module.exports = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: parseInt(process.env.PORT, 10) || 5000,
   appUrl: process.env.APP_URL || "http://localhost:5000",
-  // Where gateway hosted-payment pages redirect the user BACK to — this is
-  // the frontend SPA, never the backend API, since the backend has no UI
-  // to show them. Defaults to the local Vite dev server port.
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
 
   jwt: {
@@ -73,5 +72,15 @@ module.exports = {
     clientId: process.env.AIRALO_CLIENT_ID,
     clientSecret: process.env.AIRALO_CLIENT_SECRET,
     baseUrl: process.env.AIRALO_BASE_URL || "https://sandbox-partners-api.airalo.com",
+  },
+
+  anthropic: {
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+  },
+
+  support: {
+    // wa.me format: digits only, country code, no "+" or spaces (e.g. 2348012345678)
+    whatsappNumber: process.env.SUPPORT_WHATSAPP_NUMBER,
   },
 };
