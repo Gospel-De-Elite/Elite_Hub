@@ -29,6 +29,7 @@ import ApiKeysPage from "@/features/developer/ApiKeysPage";
 import ApiKeyUsagePage from "@/features/developer/ApiKeyUsagePage";
 import ApiDocsPage from "@/features/developer/ApiDocsPage";
 import ProfilePage from "@/features/profile/ProfilePage";
+import LandingPage from "@/features/landing/LandingPage";
 import ComingSoonPage from "@/components/common/ComingSoonPage";
 
 export default function App() {
@@ -80,8 +81,8 @@ export default function App() {
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
