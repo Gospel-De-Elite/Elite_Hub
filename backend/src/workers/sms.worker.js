@@ -1,7 +1,7 @@
 const { Worker } = require("bullmq");
 const connection = require("../queues/connection");
 const prisma = require("../common/config/prisma");
-const termiiClient = require("../modules/sms/clients/termii.client");
+const smsClient = require("../modules/sms/clients/multitexter.client");
 const { notificationQueue } = require("../queues");
 const logger = require("../common/utils/logger");
 
@@ -34,10 +34,10 @@ const smsWorker = new Worker(
 
     for (const msg of messages) {
       try {
-        const result = await termiiClient.sendSms({
-          to: msg.recipient,
+        const result = await smsClient.sendSms({
+          to:   msg.recipient,
           from: campaign.senderId,
-          sms: msg.message,
+          sms:  msg.message,
         });
 
         await prisma.smsMessage.update({
