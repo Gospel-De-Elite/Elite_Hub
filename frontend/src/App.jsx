@@ -1,34 +1,33 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import AppBootstrap        from '@/app/AppBootstrap';
 import LoginPage           from '@/features/auth/LoginPage';
 import RegisterPage        from '@/features/auth/RegisterPage';
 import ForgotPasswordPage  from '@/features/auth/ForgotPasswordPage';
 import ResetPasswordPage   from '@/features/auth/ResetPasswordPage';
 
-import ProtectedRoute      from '@/components/layouts/ProtectedRoute';
-import AdminRoute          from '@/components/layouts/AdminRoute';
-import DashboardLayout     from '@/components/layouts/DashboardLayout';
-import AdminLayout         from '@/components/layouts/AdminLayout';
+import ProtectedRoute   from '@/components/layouts/ProtectedRoute';
+import AdminRoute       from '@/components/layouts/AdminRoute';
+import DashboardLayout  from '@/components/layouts/DashboardLayout';
+import AdminLayout      from '@/components/layouts/AdminLayout';
 
-import DashboardHomePage   from '@/features/dashboard/DashboardHomePage';
+import DashboardHomePage from '@/features/dashboard/DashboardHomePage';
 
-import WalletOverviewPage      from '@/features/wallet/WalletOverviewPage';
-import WalletFundingPage       from '@/features/wallet/WalletFundingPage';
-import WalletCallbackPage      from '@/features/wallet/WalletCallbackPage';
-import WalletTransactionsPage  from '@/features/wallet/WalletTransactionsPage';
+import WalletOverviewPage     from '@/features/wallet/WalletOverviewPage';
+import WalletFundingPage      from '@/features/wallet/WalletFundingPage';
+import WalletCallbackPage     from '@/features/wallet/WalletCallbackPage';
+import WalletTransactionsPage from '@/features/wallet/WalletTransactionsPage';
 
 import AirtimePurchasePage from '@/features/airtime/AirtimePurchasePage';
 import DataPurchasePage    from '@/features/data/DataPurchasePage';
 import BillsPage           from '@/features/bills/BillsPage';
 import OrdersPage          from '@/features/orders/OrdersPage';
 
-import SmsDashboardPage  from '@/features/sms/SmsDashboardPage';
-import SmsBuyCreditsPage from '@/features/sms/SmsBuyCreditsPage';
-import CampaignsListPage from '@/features/sms/CampaignsListPage';
-import NewCampaignPage   from '@/features/sms/NewCampaignPage';
+import SmsDashboardPage   from '@/features/sms/SmsDashboardPage';
+import SmsBuyCreditsPage  from '@/features/sms/SmsBuyCreditsPage';
+import CampaignsListPage  from '@/features/sms/CampaignsListPage';
+import NewCampaignPage    from '@/features/sms/NewCampaignPage';
 import CampaignDetailPage from '@/features/sms/CampaignDetailPage';
-import SenderIdsPage     from '@/features/sms/SenderIdsPage';
+import SenderIdsPage      from '@/features/sms/SenderIdsPage';
 
 import EsimCountriesPage   from '@/features/esim/EsimCountriesPage';
 import EsimPackagesPage    from '@/features/esim/EsimPackagesPage';
@@ -40,27 +39,33 @@ import ApiKeysPage           from '@/features/developer/ApiKeysPage';
 import ApiKeyUsagePage       from '@/features/developer/ApiKeyUsagePage';
 import ApiDocsPage           from '@/features/developer/ApiDocsPage';
 
-import ProfilePage  from '@/features/profile/ProfilePage';
-import LandingPage  from '@/features/landing/LandingPage';
+import ProfilePage from '@/features/profile/ProfilePage';
+import LandingPage from '@/features/landing/LandingPage';
 
-import AdminDashboardPage   from '@/features/admin/AdminDashboardPage';
-import AdminUsersPage       from '@/features/admin/AdminUsersPage';
-import AdminUserDetailPage  from '@/features/admin/AdminUserDetailPage';
+import AdminDashboardPage    from '@/features/admin/AdminDashboardPage';
+import AdminUsersPage        from '@/features/admin/AdminUsersPage';
+import AdminUserDetailPage   from '@/features/admin/AdminUserDetailPage';
+import AdminPricingPage      from '@/features/admin/AdminPricingPage';
+import AdminProvidersPage    from '@/features/admin/AdminProvidersPage';
+import AdminSenderIdsPage    from '@/features/admin/AdminSenderIdsPage';
+import AdminEsimDisputesPage from '@/features/admin/AdminEsimDisputesPage';
+import AdminRoleUpgradesPage from '@/features/admin/AdminRoleUpgradesPage';
+import AdminSupportPage      from '@/features/admin/AdminSupportPage';
+import AdminAuditLogsPage    from '@/features/admin/AdminAuditLogsPage';
 
 import ComingSoonPage from '@/components/common/ComingSoonPage';
 
 export default function App() {
   return (
-    <AppBootstrap>
     <Routes>
-      {/* ── Public ─────────────────────────────────────────── */}
-      <Route path="/"               element={<LandingPage />} />
-      <Route path="/login"          element={<LoginPage />} />
-      <Route path="/register"       element={<RegisterPage />} />
+      {/* ── Public ───────────────────────────────────────────── */}
+      <Route path="/"                element={<LandingPage />} />
+      <Route path="/login"           element={<LoginPage />} />
+      <Route path="/register"        element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-      {/* ── Customer dashboard ─────────────────────────────── */}
+      {/* ── Customer dashboard ───────────────────────────────── */}
       <Route
         path="/dashboard"
         element={
@@ -81,12 +86,12 @@ export default function App() {
         <Route path="bills"   element={<BillsPage />} />
         <Route path="orders"  element={<OrdersPage />} />
 
-        <Route path="sms"                    element={<SmsDashboardPage />} />
-        <Route path="sms/buy-credits"        element={<SmsBuyCreditsPage />} />
-        <Route path="sms/campaigns"          element={<CampaignsListPage />} />
-        <Route path="sms/campaigns/new"      element={<NewCampaignPage />} />
-        <Route path="sms/campaigns/:id"      element={<CampaignDetailPage />} />
-        <Route path="sms/sender-ids"         element={<SenderIdsPage />} />
+        <Route path="sms"               element={<SmsDashboardPage />} />
+        <Route path="sms/buy-credits"   element={<SmsBuyCreditsPage />} />
+        <Route path="sms/campaigns"     element={<CampaignsListPage />} />
+        <Route path="sms/campaigns/new" element={<NewCampaignPage />} />
+        <Route path="sms/campaigns/:id" element={<CampaignDetailPage />} />
+        <Route path="sms/sender-ids"    element={<SenderIdsPage />} />
 
         <Route path="esim"                       element={<EsimCountriesPage />} />
         <Route path="esim/packages/:countryCode" element={<EsimPackagesPage />} />
@@ -103,7 +108,7 @@ export default function App() {
         <Route path="profile"       element={<ProfilePage />} />
       </Route>
 
-      {/* ── Admin dashboard ────────────────────────────────── */}
+      {/* ── Admin dashboard ──────────────────────────────────── */}
       <Route
         path="/admin"
         element={
@@ -117,18 +122,16 @@ export default function App() {
         <Route path="users"    element={<AdminUsersPage />} />
         <Route path="users/:id" element={<AdminUserDetailPage />} />
 
-        {/* Filled by Admin Bit 2 */}
-        <Route path="pricing"       element={<ComingSoonPage title="Pricing Management" />} />
-        <Route path="providers"     element={<ComingSoonPage title="Provider Health" />} />
-        <Route path="sender-ids"    element={<ComingSoonPage title="Sender ID Requests" />} />
-        <Route path="esim-disputes" element={<ComingSoonPage title="eSIM Disputes" />} />
-        <Route path="role-upgrades" element={<ComingSoonPage title="Role Upgrade Requests" />} />
-        <Route path="support"       element={<ComingSoonPage title="Support Escalations" />} />
-        <Route path="audit-logs"    element={<ComingSoonPage title="Audit Logs" />} />
+        <Route path="pricing"       element={<AdminPricingPage />} />
+        <Route path="providers"     element={<AdminProvidersPage />} />
+        <Route path="sender-ids"    element={<AdminSenderIdsPage />} />
+        <Route path="esim-disputes" element={<AdminEsimDisputesPage />} />
+        <Route path="role-upgrades" element={<AdminRoleUpgradesPage />} />
+        <Route path="support"       element={<AdminSupportPage />} />
+        <Route path="audit-logs"    element={<AdminAuditLogsPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    </AppBootstrap>
   );
 }
