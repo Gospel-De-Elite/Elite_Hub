@@ -2,7 +2,7 @@ const prisma = require("../../common/config/prisma");
 const ApiError = require("../../common/errors/ApiError");
 const logAudit = require("../../common/utils/auditLogger");
 const { notificationQueue } = require("../../queues");
-const termiiClient = require("./clients/termii.client");
+const smsClient = require("./clients/multitexter.client");
 const logger = require("../../common/utils/logger");
 
 const SENDER_ID_REGEX = /^[A-Za-z0-9 ]{3,11}$/; // GSM alphanumeric sender ID convention: max 11 chars
@@ -110,10 +110,12 @@ async function submitToCarrier(requestId) {
     throw ApiError.conflict("Request must be ADMIN_APPROVED before carrier submission");
   }
 
-  const result = await termiiClient.requestSenderId({
+  // MultiTexter does not expose a Sender ID registration API — registration
+  // must be done manually via the MultiTexter dashboard. requestSenderId is
+  // a no-op stub that returns a local acknowledgement so this workflow can
+  // advance to SUBMITTED_TO_CARRIER and await admin confirmation.
+  const result = await smsClient.requestSenderId({
     senderId: request.requestedSenderId,
-    usecase: "Transactional alerts for Elite Hub customers",
-    company: "De Elite Digitals",
   });
 
   const updated = await prisma.senderIdRequest.update({
@@ -121,16 +123,18 @@ async function submitToCarrier(requestId) {
     data: { status: "SUBMITTED_TO_CARRIER", submittedToCarrierAt: new Date() },
   });
 
-  logger.info(`Sender ID "${request.requestedSenderId}" submitted to Termii: ${JSON.stringify(result.raw)}`);
+  logger.info(
+    `Sender ID "${request.requestedSenderId}" marked SUBMITTED_TO_CARRIER. ` +
+    `Register manually at https://web.multitexter.com/dashboard — ${JSON.stringify(result.raw)}`
+  );
 
   return updated;
 }
 
 /**
- * Records the carrier's final decision. Termii's sender ID review is a
- * manual compliance process on their end with no confirmed self-serve
- * status-check API as of this writing — so this is admin-entered based on
- * what Termii communicates via dashboard/email, not automated polling.
+ * Records the carrier's final decision — admin-entered based on what
+ * MultiTexter communicates via their dashboard, not automated polling.
+ * MultiTexter has no self-serve sender ID status-check API.
  */
 async function recordCarrierDecision({ requestId, status, carrierRejectionReason, reviewer }) {
   const request = await prisma.senderIdRequest.findUnique({ where: { id: requestId } });

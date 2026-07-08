@@ -13,7 +13,7 @@ const required = [
   "SME_API_BASE_URL",
   "VTUNG_API_KEY",
   "VTUNG_BASE_URL",
-  "TERMII_API_KEY",
+  "MULTITEXTER_API_KEY",
   "AIRALO_CLIENT_ID",
   "AIRALO_CLIENT_SECRET",
   "ANTHROPIC_API_KEY",
@@ -63,9 +63,11 @@ module.exports = {
     baseUrl: process.env.VTUNG_BASE_URL,
   },
 
-  termii: {
-    apiKey: process.env.TERMII_API_KEY,
-    baseUrl: process.env.TERMII_BASE_URL || "https://api.ng.termii.com",
+  multitexter: {
+    // API key from: https://web.multitexter.com/dashboard/profile-summary → "Get API Key"
+    // Base URL is fixed per the v2 docs — no sandbox environment is documented.
+    apiKey: process.env.MULTITEXTER_API_KEY,
+    baseUrl: process.env.MULTITEXTER_BASE_URL || "https://app.multitexter.com",
   },
 
   airalo: {
