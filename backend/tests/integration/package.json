@@ -1,0 +1,18 @@
+{
+  "name": "elite-hub-integration-tests",
+  "version": "1.0.0",
+  "description": "Phase 13 — integration tests for Elite Hub backend",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test:concurrency": "node tests/wallet-concurrency.js",
+    "test:webhook":     "node tests/webhook-replay.js",
+    "test:revocation":  "node tests/token-revocation.js",
+    "test:failover":    "node tests/provider-failover.js",
+    "test:ratelimit":   "node tests/rate-limit.js"
+  },
+  "dependencies": {
+    "axios":  "^1.7.4",
+    "dotenv": "^16.4.5"
+  }
+}
