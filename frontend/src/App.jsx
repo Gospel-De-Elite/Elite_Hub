@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
+import AppBootstrap        from '@/app/AppBootstrap';
 import LoginPage           from '@/features/auth/LoginPage';
 import RegisterPage        from '@/features/auth/RegisterPage';
 import ForgotPasswordPage  from '@/features/auth/ForgotPasswordPage';
@@ -57,11 +58,12 @@ import ComingSoonPage from '@/components/common/ComingSoonPage';
 
 export default function App() {
   return (
+    <AppBootstrap>
     <Routes>
-      {/* ── Public ───────────────────────────────────────────── */}
-      <Route path="/"                element={<LandingPage />} />
-      <Route path="/login"           element={<LoginPage />} />
-      <Route path="/register"        element={<RegisterPage />} />
+      {/* ── Public ─────────────────────────────────────────── */}
+      <Route path="/"               element={<LandingPage />} />
+      <Route path="/login"          element={<LoginPage />} />
+      <Route path="/register"       element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
@@ -133,5 +135,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+   </AppBootstrap>
   );
 }

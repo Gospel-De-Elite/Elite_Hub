@@ -747,6 +747,8 @@ model ApiKey {
   webhookUrl    String?      @map("webhook_url") @db.Text
   status        ApiKeyStatus @default(ACTIVE)
   lastUsedAt    DateTime?    @map("last_used_at") @db.Timestamptz
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   user      User          @relation(fields: [userId], references: [id])
