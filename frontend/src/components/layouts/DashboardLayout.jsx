@@ -6,6 +6,7 @@ import { useCurrentUserQuery } from "@/features/user/useCurrentUserQuery";
 import { useWalletQuery } from "@/features/wallet/useWalletQuery";
 import { useNotificationsQuery } from "@/features/notifications/useNotificationsQuery";
 import SupportWidget from "@/features/support/SupportWidget";
+import EmailVerificationBanner from "@/components/common/EmailVerificationBanner";
 
 export default function DashboardLayout() {
   // Keeps Redux's user/wallet/notifications slices fresh app-wide — every
@@ -20,6 +21,7 @@ export default function DashboardLayout() {
       <Sidebar />
       <div className="flex flex-1 flex-col">
         <Header />
+        <EmailVerificationBanner />
         <main className="flex-1 px-4 py-6 pb-24 md:px-8 md:pb-8">
           <Outlet />
         </main>

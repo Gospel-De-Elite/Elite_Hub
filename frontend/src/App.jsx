@@ -5,6 +5,8 @@ import LoginPage           from '@/features/auth/LoginPage';
 import RegisterPage        from '@/features/auth/RegisterPage';
 import ForgotPasswordPage  from '@/features/auth/ForgotPasswordPage';
 import ResetPasswordPage   from '@/features/auth/ResetPasswordPage';
+import VerifyEmailPage     from '@/features/auth/VerifyEmailPage';
+import AuthCallbackPage    from '@/features/auth/AuthCallbackPage';
 
 import ProtectedRoute   from '@/components/layouts/ProtectedRoute';
 import AdminRoute       from '@/components/layouts/AdminRoute';
@@ -66,6 +68,8 @@ export default function App() {
       <Route path="/register"       element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
+      <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/auth/callback"     element={<AuthCallbackPage />} />
 
       {/* ── Customer dashboard ───────────────────────────────── */}
       <Route

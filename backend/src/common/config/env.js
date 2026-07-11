@@ -16,7 +16,10 @@ const required = [
   "MULTITEXTER_API_KEY",
   "AIRALO_CLIENT_ID",
   "AIRALO_CLIENT_SECRET",
-  "ANTHROPIC_API_KEY",
+  "RESEND_API_KEY",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "GOOGLE_CALLBACK_URL",
   "SUPPORT_WHATSAPP_NUMBER",
 ];
 
@@ -74,6 +77,17 @@ module.exports = {
     clientId: process.env.AIRALO_CLIENT_ID,
     clientSecret: process.env.AIRALO_CLIENT_SECRET,
     baseUrl: process.env.AIRALO_BASE_URL || "https://sandbox-partners-api.airalo.com",
+  },
+
+  resend: {
+    apiKey:    process.env.RESEND_API_KEY,
+    fromEmail: process.env.FROM_EMAIL || "noreply@elitehub.ng",
+  },
+
+  google: {
+    clientId:     process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackUrl:  process.env.GOOGLE_CALLBACK_URL,
   },
 
   anthropic: {

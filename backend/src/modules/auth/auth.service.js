@@ -1,23 +1,21 @@
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const prisma = require("../../common/config/prisma");
+"use strict";
+
+const bcrypt  = require("bcryptjs");
+const crypto  = require("crypto");
+const prisma  = require("../../common/config/prisma");
 const ApiError = require("../../common/errors/ApiError");
+const env     = require("../../common/config/env");
 const generateReferralCode = require("../../common/utils/generateReferralCode");
 const logAudit = require("../../common/utils/auditLogger");
-const {
-  signAccessToken,
-  signRefreshToken,
-  verifyRefreshToken,
-} = require("../../common/utils/jwt");
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../../common/utils/jwt");
+const { sendVerificationEmail, sendPasswordResetEmail } = require("../../common/utils/mailer");
 
-// Actual crediting of this reward happens in the referral engine (Phase 5)
-// only once the referred user's first funding is confirmed.
-const REFERRAL_REWARD_AMOUNT = 100;
-const REFRESH_TOKEN_TTL_DAYS = 30;
-const RESET_TOKEN_TTL_MINUTES = 30;
+const REFERRAL_REWARD_AMOUNT   = 100;
+const REFRESH_TOKEN_TTL_DAYS   = 30;
+const RESET_TOKEN_TTL_MINUTES  = 30;
+const VERIFY_TOKEN_TTL_HOURS   = 24;
+const RESEND_COOLDOWN_MINUTES  = 1; // minimum gap between resend requests
 
-// Shared platform default — every user sends under this until/unless they
-// get a custom sender ID approved through the full two-layer workflow.
 const DEFAULT_SENDER_ID = "EliteHub";
 
 function hashToken(token) {
@@ -26,31 +24,30 @@ function hashToken(token) {
 
 function sanitizeUser(user) {
   return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phone: user.phone,
-    role: user.role.name,
-    referralCode: user.referralCode,
-    status: user.status,
+    id:              user.id,
+    firstName:       user.firstName,
+    lastName:        user.lastName,
+    email:           user.email,
+    phone:           user.phone,
+    role:            user.role.name,
+    referralCode:    user.referralCode,
+    status:          user.status,
+    isEmailVerified: user.isEmailVerified,
   };
 }
 
 async function issueTokenPair(user, meta = {}) {
   const payload = { sub: user.id, role: user.role.name };
 
-  const accessToken = signAccessToken(payload);
+  const accessToken  = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
 
-  // Refresh tokens are tracked server-side so logout-everywhere and
-  // password-reset can actually revoke them — never trusted as purely stateless.
   await prisma.refreshToken.create({
     data: {
-      userId: user.id,
+      userId:    user.id,
       tokenHash: hashToken(refreshToken),
       userAgent: meta.userAgent || null,
       ipAddress: meta.ipAddress || null,
@@ -60,6 +57,43 @@ async function issueTokenPair(user, meta = {}) {
 
   return { accessToken, refreshToken };
 }
+
+// ─── Email verification helpers ───────────────────────────────────────────────
+
+async function createAndSendVerificationToken(user) {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = hashToken(rawToken);
+  const expiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_HOURS * 60 * 60 * 1000);
+
+  // Invalidate any existing unused tokens before creating a new one.
+  await prisma.emailVerificationToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data:  { usedAt: new Date() }, // mark as used so they won't be accepted
+  });
+
+  await prisma.emailVerificationToken.create({
+    data: { userId: user.id, tokenHash, expiresAt },
+  });
+
+  const verificationUrl =
+    `${env.frontendUrl}/auth/verify-email?token=${rawToken}`;
+
+  // Fire-and-forget — mailer never throws, logs internally on failure.
+  await sendVerificationEmail({
+    to:              user.email,
+    firstName:       user.firstName,
+    verificationUrl,
+  });
+
+  // In dev mode, log the raw token so the flow can be tested without email.
+  if (env.nodeEnv !== "production") {
+    return { devOnlyVerifyToken: rawToken };
+  }
+
+  return null;
+}
+
+// ─── Auth functions ───────────────────────────────────────────────────────────
 
 async function register(data, meta = {}) {
   const { firstName, lastName, email, phone, password, referralCode } = data;
@@ -74,56 +108,43 @@ async function register(data, meta = {}) {
   let referrer = null;
   if (referralCode) {
     referrer = await prisma.user.findUnique({ where: { referralCode } });
-    if (!referrer) {
-      throw ApiError.badRequest("Invalid referral code");
-    }
+    if (!referrer) throw ApiError.badRequest("Invalid referral code");
   }
 
   const customerRole = await prisma.role.findUnique({ where: { name: "CUSTOMER" } });
   if (!customerRole) throw ApiError.internal("CUSTOMER role is not seeded");
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash    = await bcrypt.hash(password, 12);
   const newReferralCode = await generateReferralCode(firstName);
 
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        roleId: customerRole.id,
+        roleId:       customerRole.id,
         firstName,
         lastName,
         email,
         phone,
         passwordHash,
         referralCode: newReferralCode,
-        referredBy: referrer ? referrer.id : null,
+        referredBy:   referrer ? referrer.id : null,
       },
       include: { role: true },
     });
 
-    // Wallet-first platform — every user gets a wallet immediately, balance 0.
     await tx.wallet.create({ data: { userId: created.id } });
 
-    // Every user gets a temporary default sender ID immediately, per the
-    // addendum — custom sender IDs go through the full approval workflow,
-    // but nobody is ever blocked from sending in the meantime.
     await tx.senderId.create({
-      data: {
-        userId: created.id,
-        senderId: DEFAULT_SENDER_ID,
-        isDefault: true,
-        status: "DEFAULT",
-      },
+      data: { userId: created.id, senderId: DEFAULT_SENDER_ID, isDefault: true, status: "DEFAULT" },
     });
 
-    // Pending referral record. `rewarded` flips to true only when the
-    // referral engine confirms qualifying funding.
     if (referrer) {
       await tx.referral.create({
         data: {
-          referrerId: referrer.id,
+          referrerId:     referrer.id,
           referredUserId: created.id,
-          rewardAmount: REFERRAL_REWARD_AMOUNT,
-          rewarded: false,
+          rewardAmount:   REFERRAL_REWARD_AMOUNT,
+          rewarded:       false,
         },
       });
     }
@@ -132,23 +153,30 @@ async function register(data, meta = {}) {
   });
 
   await logAudit({
-    actorId: user.id,
-    action: "USER_REGISTERED",
+    actorId:   user.id,
+    action:    "USER_REGISTERED",
     entityType: "User",
-    entityId: user.id,
-    newValue: { email: user.email, phone: user.phone },
+    entityId:  user.id,
+    newValue:  { email: user.email, phone: user.phone },
     ipAddress: meta.ipAddress,
     userAgent: meta.userAgent,
   });
 
+  // Send verification email — non-blocking; registration always succeeds.
+  const devToken = await createAndSendVerificationToken(user);
+
   const tokens = await issueTokenPair(user, meta);
 
-  return { user: sanitizeUser(user), ...tokens };
+  return {
+    user: sanitizeUser(user),
+    ...tokens,
+    ...(devToken || {}),
+  };
 }
 
 async function login({ email, password }, meta = {}) {
   const user = await prisma.user.findUnique({
-    where: { email },
+    where:   { email },
     include: { role: true },
   });
 
@@ -178,7 +206,7 @@ async function refresh(refreshToken, meta = {}) {
     throw ApiError.unauthorized("Invalid or expired refresh token");
   }
 
-  const tokenHash = hashToken(refreshToken);
+  const tokenHash   = hashToken(refreshToken);
   const storedToken = await prisma.refreshToken.findFirst({
     where: { tokenHash, userId: decoded.sub },
   });
@@ -188,7 +216,7 @@ async function refresh(refreshToken, meta = {}) {
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: decoded.sub },
+    where:   { id: decoded.sub },
     include: { role: true },
   });
 
@@ -196,10 +224,9 @@ async function refresh(refreshToken, meta = {}) {
     throw ApiError.unauthorized("Account no longer active");
   }
 
-  // Rotate on every use: revoke the consumed token, issue a brand new pair.
   await prisma.refreshToken.update({
     where: { id: storedToken.id },
-    data: { revokedAt: new Date() },
+    data:  { revokedAt: new Date() },
   });
 
   const tokens = await issueTokenPair(user, meta);
@@ -211,42 +238,100 @@ async function logout(refreshToken) {
   const tokenHash = hashToken(refreshToken);
   await prisma.refreshToken.updateMany({
     where: { tokenHash, revokedAt: null },
-    data: { revokedAt: new Date() },
+    data:  { revokedAt: new Date() },
   });
 }
 
 async function logoutAll(userId) {
   await prisma.refreshToken.updateMany({
     where: { userId, revokedAt: null },
-    data: { revokedAt: new Date() },
+    data:  { revokedAt: new Date() },
   });
 
   await logAudit({
-    actorId: userId,
-    action: "LOGOUT_ALL_DEVICES",
+    actorId:    userId,
+    action:     "LOGOUT_ALL_DEVICES",
     entityType: "User",
-    entityId: userId,
+    entityId:   userId,
   });
 }
 
-/**
- * Always returns the same generic message regardless of whether the email
- * exists — prevents account enumeration via response content/timing.
- *
- * No email provider exists anywhere in this platform yet — in non-production
- * environments, the raw token is returned directly in the response so this
- * flow can be tested end-to-end. This MUST be wired to real email delivery
- * before launch; devOnlyResetToken must never ship in a production response.
- */
+async function verifyEmail(token) {
+  const tokenHash = hashToken(token);
+
+  const record = await prisma.emailVerificationToken.findFirst({
+    where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+  });
+
+  if (!record) {
+    throw ApiError.badRequest("This verification link is invalid or has expired. Request a new one from your dashboard.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: record.userId },
+      data:  { isEmailVerified: true },
+    });
+    await tx.emailVerificationToken.update({
+      where: { id: record.id },
+      data:  { usedAt: new Date() },
+    });
+  });
+
+  await logAudit({
+    actorId:    record.userId,
+    action:     "EMAIL_VERIFIED",
+    entityType: "User",
+    entityId:   record.userId,
+  });
+
+  return { message: "Email address verified successfully." };
+}
+
+async function resendVerification(userId) {
+  const user = await prisma.user.findUnique({
+    where:   { id: userId },
+    include: { role: true },
+  });
+
+  if (!user) throw ApiError.notFound("User not found");
+
+  if (user.isEmailVerified) {
+    throw ApiError.badRequest("Your email address is already verified.");
+  }
+
+  // Rate-gate: prevent hammering — check most recent token created_at
+  const recent = await prisma.emailVerificationToken.findFirst({
+    where:   { userId, usedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (recent) {
+    const cooldownMs = RESEND_COOLDOWN_MINUTES * 60 * 1000;
+    const elapsed    = Date.now() - new Date(recent.createdAt).getTime();
+    if (elapsed < cooldownMs) {
+      const waitSec = Math.ceil((cooldownMs - elapsed) / 1000);
+      throw ApiError.tooManyRequests(
+        `Please wait ${waitSec} seconds before requesting another verification email.`
+      );
+    }
+  }
+
+  const devToken = await createAndSendVerificationToken(user);
+
+  return {
+    message: "A new verification email has been sent.",
+    ...(devToken || {}),
+  };
+}
+
 async function forgotPassword(email) {
   const genericResponse = { message: "If that email exists, a reset link has been sent." };
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return genericResponse;
-  }
+  if (!user) return genericResponse;
 
-  const rawToken = crypto.randomBytes(32).toString("hex");
+  const rawToken  = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
 
@@ -254,7 +339,15 @@ async function forgotPassword(email) {
     data: { userId: user.id, tokenHash, expiresAt },
   });
 
-  if (process.env.NODE_ENV !== "production") {
+  const resetUrl = `${env.frontendUrl}/reset-password?token=${rawToken}`;
+
+  await sendPasswordResetEmail({
+    to:        user.email,
+    firstName: user.firstName,
+    resetUrl,
+  });
+
+  if (env.nodeEnv !== "production") {
     return { ...genericResponse, devOnlyResetToken: rawToken };
   }
 
@@ -262,8 +355,7 @@ async function forgotPassword(email) {
 }
 
 async function resetPassword({ token, newPassword }) {
-  const tokenHash = hashToken(token);
-
+  const tokenHash   = hashToken(token);
   const resetRecord = await prisma.passwordResetToken.findFirst({
     where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
   });
@@ -277,21 +369,17 @@ async function resetPassword({ token, newPassword }) {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: resetRecord.userId }, data: { passwordHash } });
     await tx.passwordResetToken.update({ where: { id: resetRecord.id }, data: { usedAt: new Date() } });
-
-    // Security: a password reset invalidates every existing session, not
-    // just the device that requested it — if credentials were compromised,
-    // any already-issued refresh token should die here too.
     await tx.refreshToken.updateMany({
       where: { userId: resetRecord.userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data:  { revokedAt: new Date() },
     });
   });
 
   await logAudit({
-    actorId: resetRecord.userId,
-    action: "PASSWORD_RESET",
+    actorId:    resetRecord.userId,
+    action:     "PASSWORD_RESET",
     entityType: "User",
-    entityId: resetRecord.userId,
+    entityId:   resetRecord.userId,
   });
 
   return { message: "Password has been reset successfully. Please log in again." };
@@ -303,13 +391,6 @@ async function getCurrentUser(userId) {
   return sanitizeUser(user);
 }
 
-/**
- * Distinct from resetPassword — this is for a user who's currently logged
- * in and knows their existing password, not someone who's lost access.
- * Same security posture as a reset though: revokes every refresh token,
- * since a password that needed changing may have been compromised and
- * every other session should die, not just continue quietly.
- */
 async function changePassword({ userId, currentPassword, newPassword }) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.passwordHash) {
@@ -317,9 +398,7 @@ async function changePassword({ userId, currentPassword, newPassword }) {
   }
 
   const matches = await bcrypt.compare(currentPassword, user.passwordHash);
-  if (!matches) {
-    throw ApiError.unauthorized("Current password is incorrect");
-  }
+  if (!matches) throw ApiError.unauthorized("Current password is incorrect");
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
 
@@ -327,18 +406,113 @@ async function changePassword({ userId, currentPassword, newPassword }) {
     await tx.user.update({ where: { id: userId }, data: { passwordHash } });
     await tx.refreshToken.updateMany({
       where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data:  { revokedAt: new Date() },
     });
   });
 
   await logAudit({
-    actorId: userId,
-    action: "PASSWORD_CHANGED",
+    actorId:    userId,
+    action:     "PASSWORD_CHANGED",
     entityType: "User",
-    entityId: userId,
+    entityId:   userId,
   });
 
   return { message: "Password changed successfully." };
+}
+
+// ─── Google OAuth — find-or-create ───────────────────────────────────────────
+/**
+ * Called by google.strategy.js after a successful Google OAuth callback.
+ * Implements the Addendum's exact rule:
+ *   "If Google email matches existing account → link, do not create duplicate"
+ *   "Only auto-link if existing account's email is already verified"
+ */
+async function findOrCreateGoogleUser({ googleId, email, firstName, lastName, picture }) {
+  // 1. Look up by Google ID first (returning user, fastest path)
+  let user = await prisma.user.findUnique({
+    where:   { googleId },
+    include: { role: true },
+  });
+  if (user) return user;
+
+  // 2. Look up by email
+  const existingByEmail = await prisma.user.findUnique({
+    where:   { email },
+    include: { role: true },
+  });
+
+  if (existingByEmail) {
+    // Addendum rule: only link if the email is already verified on the
+    // existing account — prevents an attacker from hijacking an account by
+    // simply creating a Google account with the same email address.
+    if (!existingByEmail.isEmailVerified) {
+      throw ApiError.conflict(
+        "An account with this email already exists but is not yet verified. " +
+        "Please verify your email address first, then sign in with Google."
+      );
+    }
+
+    // Link the Google ID to the existing account
+    user = await prisma.user.update({
+      where:   { id: existingByEmail.id },
+      data:    { googleId, isEmailVerified: true },
+      include: { role: true },
+    });
+
+    await logAudit({
+      actorId:    user.id,
+      action:     "GOOGLE_ACCOUNT_LINKED",
+      entityType: "User",
+      entityId:   user.id,
+      newValue:   { googleId },
+    });
+
+    return user;
+  }
+
+  // 3. New user — create from scratch
+  const customerRole = await prisma.role.findUnique({ where: { name: "CUSTOMER" } });
+  if (!customerRole) throw ApiError.internal("CUSTOMER role is not seeded");
+
+  const referralCode = await generateReferralCode(firstName);
+
+  user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        roleId:          customerRole.id,
+        firstName,
+        lastName,
+        email,
+        // Google users have no password — passwordHash stays null.
+        // The login endpoint guards against this: `if (!user.passwordHash)`
+        // already throws, so Google-only accounts cannot be accessed via
+        // the email/password login route.
+        passwordHash:    null,
+        phone:           null, // will be filled in on first profile visit
+        referralCode,
+        googleId,
+        isEmailVerified: true, // Google already verified the email
+      },
+      include: { role: true },
+    });
+
+    await tx.wallet.create({ data: { userId: created.id } });
+    await tx.senderId.create({
+      data: { userId: created.id, senderId: DEFAULT_SENDER_ID, isDefault: true, status: "DEFAULT" },
+    });
+
+    return created;
+  });
+
+  await logAudit({
+    actorId:    user.id,
+    action:     "USER_REGISTERED_GOOGLE",
+    entityType: "User",
+    entityId:   user.id,
+    newValue:   { email: user.email, googleId },
+  });
+
+  return user;
 }
 
 module.exports = {
@@ -347,8 +521,13 @@ module.exports = {
   refresh,
   logout,
   logoutAll,
+  verifyEmail,
+  resendVerification,
   forgotPassword,
   resetPassword,
   getCurrentUser,
   changePassword,
+  findOrCreateGoogleUser,
+  sanitizeUser,
+  issueTokenPair,
 };
