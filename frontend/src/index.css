@@ -67,3 +67,75 @@
     @apply font-display;
   }
 }
+/* ── Blog post markdown renderer ─────────────────────────────────────── */
+/* Applied to the <article> element in BlogPostPage and the preview pane  */
+/* in AdminBlogEditorPage via the "prose-blog" class.                      */
+
+.prose-blog {
+  color: var(--muted-foreground);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.prose-blog h1,
+.prose-blog h2,
+.prose-blog h3 {
+  color: white;
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+}
+
+/* On the dashboard admin editor the prose lives on a light background */
+.bg-background .prose-blog h1,
+.bg-background .prose-blog h2,
+.bg-background .prose-blog h3 {
+  color: hsl(var(--foreground));
+}
+
+.bg-background .prose-blog {
+  color: hsl(var(--muted-foreground));
+}
+
+.prose-blog a {
+  color: #26A7EF;
+  text-decoration: underline;
+}
+
+.prose-blog a:hover {
+  text-decoration: none;
+}
+
+.prose-blog strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+.prose-blog code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+}
+
+.prose-blog pre {
+  overflow-x: auto;
+}
+
+.prose-blog blockquote {
+  border-left: 4px solid rgba(38, 167, 239, 0.4);
+  padding-left: 1rem;
+  font-style: italic;
+}
+
+.prose-blog img {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+}
+
+.prose-blog hr {
+  border-color: rgba(255, 255, 255, 0.1);
+  margin: 2rem 0;
+}
+
+.bg-background .prose-blog hr {
+  border-color: hsl(var(--border));
+}

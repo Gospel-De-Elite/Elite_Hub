@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/api/client";
 import { clearAuth } from "@/features/auth/authSlice";
-import { clearProfile } from "@/features/user/userSlice";
+import { clearProfile, setProfile } from "@/features/user/userSlice";
 import { clearWallet } from "@/features/wallet/walletSlice";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
+import { Pencil, Check, X } from "lucide-react";
 import { getStatusVariant } from "@/lib/statusVariant";
 
 // Role-based UI rendering: a CUSTOMER can request RESELLER or AGENT; a
@@ -27,7 +28,7 @@ function Row({ label, value }) {
   return (
     <div className="flex items-center justify-between border-b border-border py-2 last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+      <span className="text-sm font-medium text-foreground">{value || "—"}</span>
     </div>
   );
 }
@@ -38,6 +39,53 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const profile = useSelector((state) => state.user.profile);
 
+  // ── Phone editing ────────────────────────────────────────────────────────────
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneSuccess, setPhoneSuccess] = useState("");
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
+
+  function startPhoneEdit() {
+    setPhoneValue(profile?.phone || "");
+    setPhoneError("");
+    setPhoneSuccess("");
+    setEditingPhone(true);
+  }
+
+  function cancelPhoneEdit() {
+    setEditingPhone(false);
+    setPhoneError("");
+  }
+
+  async function handleSavePhone() {
+    setPhoneError("");
+    setPhoneSuccess("");
+
+    const cleaned = phoneValue.trim();
+
+    // Basic Nigerian phone number validation — 11 digits starting with 0,
+    // or +234 followed by 10 digits.
+    const nigerianPhone = /^(?:0[7-9][01]\d{8}|\+234[7-9][01]\d{8})$/;
+    if (cleaned && !nigerianPhone.test(cleaned)) {
+      setPhoneError("Enter a valid Nigerian phone number (e.g. 08012345678 or +2348012345678).");
+      return;
+    }
+
+    setIsSavingPhone(true);
+    try {
+      const { data } = await apiClient.patch("/auth/me", { phone: cleaned || null });
+      dispatch(setProfile(data.data));
+      setPhoneSuccess("Phone number saved.");
+      setEditingPhone(false);
+    } catch (err) {
+      setPhoneError(err.response?.data?.message || "Could not save phone number.");
+    } finally {
+      setIsSavingPhone(false);
+    }
+  }
+
+  // ── Password ─────────────────────────────────────────────────────────────────
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -139,7 +187,61 @@ export default function ProfilePage() {
         <CardContent className="space-y-1">
           <Row label="Name" value={`${profile.firstName} ${profile.lastName}`} />
           <Row label="Email" value={profile.email} />
-          <Row label="Phone" value={profile.phone} />
+
+          {/* Phone — inline edit */}
+          <div className="border-b border-border py-2 last:border-0">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Phone</span>
+              {!editingPhone ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {profile.phone || (
+                      <span className="text-muted-foreground italic">Not set</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={startPhoneEdit}
+                    className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    title="Edit phone number"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    value={phoneValue}
+                    onChange={(e) => setPhoneValue(e.target.value)}
+                    placeholder="08012345678"
+                    className="h-8 w-44 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSavePhone();
+                      if (e.key === "Escape") cancelPhoneEdit();
+                    }}
+                  />
+                  <button
+                    onClick={handleSavePhone}
+                    disabled={isSavingPhone}
+                    className="rounded p-1 text-emerald-500 hover:bg-emerald-500/10"
+                    title="Save"
+                  >
+                    {isSavingPhone ? <Spinner className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                  </button>
+                  <button
+                    onClick={cancelPhoneEdit}
+                    className="rounded p-1 text-muted-foreground hover:bg-secondary"
+                    title="Cancel"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {phoneError && <p className="mt-1 text-xs text-destructive">{phoneError}</p>}
+            {phoneSuccess && <p className="mt-1 text-xs text-emerald-500">{phoneSuccess}</p>}
+          </div>
+
           <Row label="Referral Code" value={profile.referralCode} />
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-muted-foreground">Role</span>

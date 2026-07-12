@@ -55,7 +55,11 @@ import AdminEsimDisputesPage from '@/features/admin/AdminEsimDisputesPage';
 import AdminRoleUpgradesPage from '@/features/admin/AdminRoleUpgradesPage';
 import AdminSupportPage      from '@/features/admin/AdminSupportPage';
 import AdminAuditLogsPage    from '@/features/admin/AdminAuditLogsPage';
+import AdminBlogPage         from '@/features/admin/AdminBlogPage';
+import AdminBlogEditorPage   from '@/features/admin/AdminBlogEditorPage';
 
+import BlogListPage from '@/features/blog/BlogListPage';
+import BlogPostPage from '@/features/blog/BlogPostPage';
 import ComingSoonPage from '@/components/common/ComingSoonPage';
 
 export default function App() {
@@ -71,6 +75,8 @@ export default function App() {
       <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
       <Route path="/auth/callback"     element={<AuthCallbackPage />} />
 
+	  <Route path="/blog"              element={<BlogListPage />} />
+      <Route path="/blog/:slug"        element={<BlogPostPage />} />
       {/* ── Customer dashboard ───────────────────────────────── */}
       <Route
         path="/dashboard"
@@ -134,7 +140,10 @@ export default function App() {
         <Route path="esim-disputes" element={<AdminEsimDisputesPage />} />
         <Route path="role-upgrades" element={<AdminRoleUpgradesPage />} />
         <Route path="support"       element={<AdminSupportPage />} />
-        <Route path="audit-logs"    element={<AdminAuditLogsPage />} />
+        <Route path="audit-logs"    element={<AdminAuditLogsPage />} />\
+		<Route path="blog"          element={<AdminBlogPage />} />
+        <Route path="blog/new"      element={<AdminBlogEditorPage />} />
+        <Route path="blog/:id/edit" element={<AdminBlogEditorPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
