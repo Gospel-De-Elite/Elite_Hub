@@ -1,7 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const passport = require("passport");
 
+const googleStrategy = require("./modules/auth/google.strategy");
 const authRoutes = require("./modules/auth/auth.routes");
 const walletRoutes = require("./modules/wallets/wallet.routes");
 const webhookRoutes = require("./modules/wallets/webhook.routes");
@@ -26,6 +28,7 @@ const providerAdminRoutes = require("./modules/providers/providerAdmin.routes");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 const supportRoutes = require("./modules/support/support.routes");
 const supportAdminRoutes = require("./modules/support/supportAdmin.routes");
+const blogRoutes = require("./modules/blog/blog.routes");
 const { generalLimiter } = require("./common/middleware/rateLimiter");
 const notFound = require("./common/middleware/notFound");
 const errorHandler = require("./common/middleware/errorHandler");
@@ -34,6 +37,7 @@ const app = express();
 
 app.use(helmet());
 app.use(cors());
+app.use(passport.initialize());
 
 // `verify` captures the raw request body buffer alongside JSON parsing —
 // required for HMAC signature verification on incoming gateway webhooks,
@@ -83,6 +87,8 @@ app.use("/api/v1/admin/audit-logs", auditLogRoutes);
 app.use("/api/v1/admin/analytics", analyticsRoutes);
 app.use("/api/v1/admin/providers", providerAdminRoutes);
 app.use("/api/v1/admin/support", supportAdminRoutes);
+app.use("/api/v1/blog",         blogRoutes);
+
 
 // The public Developer API surface — API-key authenticated, not JWT.
 app.use("/api/v1/public", publicApiRoutes);

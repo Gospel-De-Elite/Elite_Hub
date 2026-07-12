@@ -8,11 +8,20 @@ const getWallet = catchAsync(async (req, res) => {
 
 const purchaseCredits = catchAsync(async (req, res) => {
   const order = await service.purchaseCredits({
-    userId: req.user.id,
+    userId:   req.user.id,
     userRole: req.user.role,
     productId: req.body.productId,
   });
   res.status(201).json({ success: true, data: order });
 });
 
-module.exports = { getWallet, purchaseCredits };
+const purchaseCustomCredits = catchAsync(async (req, res) => {
+  const result = await service.purchaseCustomCredits({
+    userId:   req.user.id,
+    userRole: req.user.role,
+    units:    req.body.units,
+  });
+  res.status(201).json({ success: true, data: result });
+});
+
+module.exports = { getWallet, purchaseCredits, purchaseCustomCredits };

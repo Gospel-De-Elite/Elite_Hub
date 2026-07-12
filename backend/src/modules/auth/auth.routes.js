@@ -25,6 +25,7 @@ router.post("/logout-all",      authenticate,                                   
 router.post("/forgot-password", authLimiter, forgotPasswordValidation,validate, controller.forgotPassword);
 router.post("/reset-password",  authLimiter, resetPasswordValidation, validate, controller.resetPassword);
 router.get( "/me",              authenticate,                                   controller.getCurrentUser);
+router.patch("/me",             authenticate,                                   controller.updateProfile);
 router.post("/change-password", authenticate, changePasswordValidation,validate, controller.changePassword);
 
 // ─── Email verification ───────────────────────────────────────────────────────

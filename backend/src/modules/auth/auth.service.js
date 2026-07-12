@@ -120,7 +120,7 @@ async function register(data, meta = {}) {
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        roleId:       customerRole.id,
+        role:         { connect: { id: customerRole.id } },
         firstName,
         lastName,
         email,
@@ -391,6 +391,38 @@ async function getCurrentUser(userId) {
   return sanitizeUser(user);
 }
 
+async function updateProfile(userId, { firstName, lastName, phone }) {
+  // If phone is being set, check it isn't already taken by another account.
+  if (phone) {
+    const existing = await prisma.user.findUnique({ where: { phone } });
+    if (existing && existing.id !== userId) {
+      throw ApiError.conflict("This phone number is already linked to another account");
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(firstName && { firstName }),
+      ...(lastName  && { lastName }),
+      // Allow setting phone to null explicitly (user removing it) or a new value.
+      // Undefined means "not supplied in this request — leave it alone".
+      ...(phone !== undefined && { phone: phone || null }),
+    },
+    include: { role: true },
+  });
+
+  await logAudit({
+    actorId:    userId,
+    action:     "PROFILE_UPDATED",
+    entityType: "User",
+    entityId:   userId,
+    newValue:   { firstName: updated.firstName, lastName: updated.lastName, phone: updated.phone },
+  });
+
+  return sanitizeUser(updated);
+}
+
 async function changePassword({ userId, currentPassword, newPassword }) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.passwordHash) {
@@ -479,7 +511,7 @@ async function findOrCreateGoogleUser({ googleId, email, firstName, lastName, pi
   user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
-        roleId:          customerRole.id,
+        role:            { connect: { id: customerRole.id } },
         firstName,
         lastName,
         email,
@@ -526,6 +558,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getCurrentUser,
+  updateProfile,
   changePassword,
   findOrCreateGoogleUser,
   sanitizeUser,

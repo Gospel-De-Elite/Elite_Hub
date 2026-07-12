@@ -6,6 +6,7 @@ import DashboardPreviewSection from "./DashboardPreviewSection";
 import ApiSection from "./ApiSection";
 import WhyChooseUsSection from "./WhyChooseUsSection";
 import TestimonialsSection from "./TestimonialsSection";
+import BlogPreviewSection from "./BlogPreviewSection";
 import FaqSection from "./FaqSection";
 import FinalCtaSection from "./FinalCtaSection";
 import LandingFooter from "./LandingFooter";
@@ -23,6 +24,7 @@ export default function LandingPage() {
       <ApiSection />
       <WhyChooseUsSection />
       <TestimonialsSection />
+      <BlogPreviewSection />
       <FaqSection />
       <FinalCtaSection />
       <LandingFooter />

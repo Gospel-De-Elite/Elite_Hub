@@ -156,6 +156,17 @@ async function main() {
       metadata: { credits: 1000 },
       pricing: { CUSTOMER: 3800, RESELLER: 3600, AGENT: 3500 },
     },
+    {
+      // Special product for the custom-unit purchase flow.
+      // `pricePerUnit` in metadata is the selling price per single SMS unit.
+      // `providerCost` is the cost per unit — margin = pricePerUnit - providerCost.
+      // The sellingPrice column here holds the per-unit price for CUSTOMER.
+      // Per-role pricing is managed via PricingRules exactly like other products.
+      code: 'SMS-CUSTOM', name: 'Custom SMS Units',
+      categoryId: catMap['sms'], providerCost: 3.2,
+      metadata: { pricePerUnit: 4.0 }, // used by frontend for real-time display only
+      pricing: { CUSTOMER: 4.0, RESELLER: 3.8, AGENT: 3.7 },
+    },
   ];
 
   for (const item of catalog) {

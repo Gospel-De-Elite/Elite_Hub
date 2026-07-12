@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   LayoutDashboard, Users, Tag, Server, Hash,
   Globe, ArrowUpCircle, MessageCircle, FileText,
-  ShieldCheck, LogOut,
+  ShieldCheck, LogOut, BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { clearAuth } from '@/features/auth/authSlice';
@@ -21,6 +21,7 @@ const NAV = [
   { to: '/admin/esim-disputes', label: 'eSIM Disputes',    icon: Globe },
   { to: '/admin/role-upgrades', label: 'Role Upgrades',    icon: ArrowUpCircle },
   { to: '/admin/support',       label: 'Support',          icon: MessageCircle },
+  { to: '/admin/blog',          label: 'Blog',             icon: BookOpen },
   { to: '/admin/audit-logs',    label: 'Audit Logs',       icon: FileText },
 ];
 
