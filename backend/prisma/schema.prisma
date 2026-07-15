@@ -202,6 +202,7 @@ model User {
   emailVerificationTokens  EmailVerificationToken[]
   blogPosts                BlogPost[]
   smsCampaigns         SmsCampaign[]
+  phonebooks  Phonebook[]
   senderIds            SenderId[]
   senderIdRequests     SenderIdRequest[]
   esimOrders           EsimOrder[]
@@ -392,6 +393,7 @@ model Provider {
   orders             Order[]
   providerHealth     ProviderHealth?
   reconciliationJobs OrderReconciliationJob[]
+  catalogSyncs       ProviderCatalogSync[]
 
   @@map("providers")
 }
@@ -843,4 +845,64 @@ model BlogPost {
   @@index([status, publishedAt])
   @@index([slug])
   @@map("blog_posts")
+}
+
+// ============================================================
+// PROVIDER CATALOG SYNC
+// ============================================================
+enum CatalogSyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+
+  @@map("catalog_sync_status")
+}
+
+model ProviderCatalogSync {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId  String            @map("provider_id") @db.Uuid
+  status      CatalogSyncStatus @default(RUNNING)
+  summary     Json?             @db.JsonB
+  error       String?           @db.Text
+  startedAt   DateTime          @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt  DateTime?         @map("finished_at") @db.Timestamptz
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([startedAt(sort: Desc)])
+  @@map("provider_catalog_syncs")
+}
+
+// ============================================================
+// PHONEBOOK CONTACT SYNC
+// ============================================================
+model Phonebook {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String             @map("user_id") @db.Uuid
+  name        String             @db.VarChar(100)
+  description String?            @db.Text
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  user     User               @relation(fields: [userId], references: [id])
+  contacts PhonebookContact[]
+
+  @@index([userId])
+  @@map("phonebooks")
+}
+
+model PhonebookContact {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phonebookId  String   @map("phonebook_id") @db.Uuid
+  name         String?  @db.VarChar(100)
+  phone        String   @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  phonebook Phonebook @relation(fields: [phonebookId], references: [id], onDelete: Cascade)
+
+  @@unique([phonebookId, phone])
+  @@index([phonebookId])
+  @@map("phonebook_contacts")
 }

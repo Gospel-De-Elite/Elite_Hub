@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query" ;
 import { Link } from "react-router-dom";
 import apiClient from "@/api/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { MessageSquare, Megaphone, Hash, Plus, ShoppingCart } from "lucide-react";
+import { MessageSquare, Megaphone, Hash, Plus, ShoppingCart, BookUser } from "lucide-react";
 
 export default function SmsDashboardPage() {
   const { data: wallet, isLoading: walletLoading } = useQuery({
@@ -31,10 +31,14 @@ export default function SmsDashboardPage() {
     },
   });
 
-  // The default "EliteHub" sender ID is a fixed platform constant, not
-  // something worth a round trip to fetch — we only need the backend for
-  // whether a CUSTOM one has been activated, which the request history
-  // already tells us once a request reaches ACTIVE.
+  const { data: phonebooksData } = useQuery({
+    queryKey: ["phonebooks-summary"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/sms/phonebooks");
+      return data.data;
+    },
+  });
+
   const activeRequest = requests?.find((r) => r.status === "ACTIVE");
   const isLoading = walletLoading || sendersLoading || campaignsLoading;
 
@@ -61,6 +65,7 @@ export default function SmsDashboardPage() {
         </Button>
       </div>
 
+      {/* Summary cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -70,7 +75,9 @@ export default function SmsDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-display text-2xl font-semibold text-foreground">{wallet?.credits ?? 0}</p>
+            <p className="font-display text-2xl font-semibold text-foreground">
+              {wallet?.credits ?? 0}
+            </p>
             <Link
               to="/dashboard/sms/buy-credits"
               className="mt-2 inline-flex items-center text-sm text-primary hover:underline"
@@ -113,7 +120,8 @@ export default function SmsDashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Nav cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           to="/dashboard/sms/campaigns"
           className="flex items-center gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-secondary"
@@ -124,6 +132,23 @@ export default function SmsDashboardPage() {
           <div>
             <p className="text-sm font-semibold text-foreground">Campaigns</p>
             <p className="text-xs text-muted-foreground">View and manage your SMS campaigns</p>
+          </div>
+        </Link>
+
+        <Link
+          to="/dashboard/sms/phonebooks"
+          className="flex items-center gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-secondary"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <BookUser className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Phonebooks</p>
+            <p className="text-xs text-muted-foreground">
+              {phonebooksData?.length
+                ? `${phonebooksData.length} phonebook${phonebooksData.length !== 1 ? "s" : ""}`
+                : "Save contact groups for quick reuse"}
+            </p>
           </div>
         </Link>
 

@@ -1,14 +1,15 @@
-const prisma = require("../../common/config/prisma");
-const ApiError = require("../../common/errors/ApiError");
-const { smsQueue } = require("../../queues");
-const smsClient = require("./clients/multitexter.client");
+'use strict';
 
-/**
- * Atomic, race-safe decrement — a single UPDATE with a guarding WHERE
- * clause is all the row-level safety SMS credits need (unlike the NGN
- * wallet, there's no separate locked-balance concept here since credits
- * are deducted immediately at campaign creation, not held-then-captured).
- */
+const { v4: uuidv4 } = require('uuid');
+const prisma = require('../../common/config/prisma');
+const ApiError = require('../../common/errors/ApiError');
+const { smsQueue } = require('../../queues');
+const redisClient = require('../../common/config/redis');
+
+const PARSED_CONTACTS_TTL = 60 * 30; // 30 minutes
+
+// ── Credit helpers ────────────────────────────────────────────────────────────
+
 async function deductCredits(userId, amount) {
   const rows = await prisma.$queryRaw`
     UPDATE sms_wallets
@@ -17,7 +18,9 @@ async function deductCredits(userId, amount) {
     RETURNING credits
   `;
   if (!rows.length) {
-    throw ApiError.badRequest("Insufficient SMS credits — purchase more before sending this campaign");
+    throw ApiError.badRequest(
+      'Insufficient SMS credits — purchase more before sending this campaign'
+    );
   }
   return rows[0].credits;
 }
@@ -29,29 +32,59 @@ async function refundCredits(userId, amount) {
   });
 }
 
-/**
- * Per the addendum: campaigns never block on a pending custom sender ID
- * approval — they silently send under the default ID instead. This picks
- * the user's ACTIVE custom sender ID if one exists, falling back to their
- * DEFAULT one (assigned at registration) otherwise.
- */
+// ── Sender ID resolution ──────────────────────────────────────────────────────
+
 async function resolveSenderId(userId) {
   const active = await prisma.senderId.findFirst({
-    where: { userId, status: "ACTIVE", isDefault: false },
+    where: { userId, status: 'ACTIVE', isDefault: false },
   });
   if (active) return { value: active.senderId, isDefault: false };
 
   const def = await prisma.senderId.findFirst({ where: { userId, isDefault: true } });
-  if (!def) throw ApiError.internal("User has no default sender ID — registration may be incomplete");
+  if (!def) throw ApiError.internal('User has no default sender ID');
 
   return { value: def.senderId, isDefault: true };
 }
 
-async function createCampaign({ userId, campaignName, message, recipients, scheduledAt }) {
-  // Deducted at creation time, not send time — this prevents several
-  // scheduled campaigns from collectively overdrawing a balance that
-  // looked sufficient when each one was created individually.
-  await deductCredits(userId, recipients.length);
+// ── Redis helpers for parsed CSV contacts ─────────────────────────────────────
+
+/**
+ * Stores a list of phone numbers in Redis and returns a lookup key.
+ * The key is scoped to the user — a parsedKey from user A cannot be used
+ * by user B to send a campaign.
+ */
+async function storeParsedContacts(userId, phones) {
+  const key = `sms:parsed:${userId}:${uuidv4()}`;
+  await redisClient.set(key, JSON.stringify(phones), 'EX', PARSED_CONTACTS_TTL);
+  return key;
+}
+
+async function fetchParsedContacts(userId, parsedKey) {
+  // Enforce ownership — the key must belong to this user.
+  if (!parsedKey.startsWith(`sms:parsed:${userId}:`)) {
+    throw ApiError.badRequest('Invalid or expired parsed contacts key');
+  }
+  const raw = await redisClient.get(parsedKey);
+  if (!raw) throw ApiError.badRequest('Parsed contacts have expired — please re-upload the CSV');
+  return JSON.parse(raw);
+}
+
+// ── Campaign CRUD ─────────────────────────────────────────────────────────────
+
+async function createCampaign({ userId, campaignName, message, recipients, parsedKey, scheduledAt }) {
+  // Resolve final recipient list — either supplied directly or via a parsedKey
+  // from a prior CSV upload. The two are mutually exclusive.
+  let finalRecipients = recipients;
+
+  if (parsedKey) {
+    finalRecipients = await fetchParsedContacts(userId, parsedKey);
+  }
+
+  if (!finalRecipients || !finalRecipients.length) {
+    throw ApiError.badRequest('No recipients provided');
+  }
+
+  await deductCredits(userId, finalRecipients.length);
 
   const senderId = await resolveSenderId(userId);
   const isScheduled = Boolean(scheduledAt && new Date(scheduledAt) > new Date());
@@ -64,41 +97,45 @@ async function createCampaign({ userId, campaignName, message, recipients, sched
         campaignName,
         senderId: senderId.value,
         messageBody: message,
-        totalRecipients: recipients.length,
-        status: isScheduled ? "SCHEDULED" : "QUEUED",
+        totalRecipients: finalRecipients.length,
+        status: isScheduled ? 'SCHEDULED' : 'QUEUED',
         scheduledAt: isScheduled ? new Date(scheduledAt) : null,
         usedDefaultSenderId: senderId.isDefault,
       },
     });
 
     await prisma.smsMessage.createMany({
-      data: recipients.map((recipient) => ({
+      data: finalRecipients.map((recipient) => ({
         campaignId: campaign.id,
         recipient,
         message,
-        deliveryStatus: "PENDING",
+        deliveryStatus: 'PENDING',
       })),
     });
-  } catch (error) {
-    // Roll back the credit deduction if campaign/message creation itself failed.
-    await refundCredits(userId, recipients.length);
-    throw error;
+  } catch (err) {
+    await refundCredits(userId, finalRecipients.length);
+    throw err;
+  }
+
+  // Clean up Redis key after successful campaign creation
+  if (parsedKey) {
+    redisClient.del(parsedKey).catch(() => {});
   }
 
   const jobOptions = isScheduled ? { delay: new Date(scheduledAt).getTime() - Date.now() } : {};
-  await smsQueue.add("send-campaign", { campaignId: campaign.id }, jobOptions);
+  await smsQueue.add('send-campaign', { campaignId: campaign.id }, jobOptions);
 
   return campaign;
 }
 
 async function cancelCampaign(userId, campaignId) {
   const campaign = await prisma.smsCampaign.findFirst({ where: { id: campaignId, userId } });
-  if (!campaign) throw ApiError.notFound("Campaign not found");
-  if (campaign.status !== "SCHEDULED") {
-    throw ApiError.conflict("Only scheduled campaigns awaiting send can be cancelled");
+  if (!campaign) throw ApiError.notFound('Campaign not found');
+  if (campaign.status !== 'SCHEDULED') {
+    throw ApiError.conflict('Only scheduled campaigns can be cancelled');
   }
 
-  await prisma.smsCampaign.update({ where: { id: campaignId }, data: { status: "CANCELLED" } });
+  await prisma.smsCampaign.update({ where: { id: campaignId }, data: { status: 'CANCELLED' } });
   await refundCredits(userId, campaign.totalRecipients);
 
   return { cancelled: true, creditsRefunded: campaign.totalRecipients };
@@ -107,7 +144,12 @@ async function cancelCampaign(userId, campaignId) {
 async function listCampaigns(userId, { page = 1, limit = 20 } = {}) {
   const skip = (page - 1) * limit;
   const [campaigns, total] = await Promise.all([
-    prisma.smsCampaign.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, skip, take: limit }),
+    prisma.smsCampaign.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
     prisma.smsCampaign.count({ where: { userId } }),
   ]);
   return { campaigns, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
@@ -118,46 +160,15 @@ async function getCampaign(userId, campaignId) {
     where: { id: campaignId, userId },
     include: { messages: true },
   });
-  if (!campaign) throw ApiError.notFound("Campaign not found");
+  if (!campaign) throw ApiError.notFound('Campaign not found');
   return campaign;
 }
 
-/**
- * Single transactional send for the public Developer API — distinct from
- * createCampaign above. A developer calling this expects a prompt,
- * definitive success/fail answer (e.g. an OTP flow), so this calls
- * MultiTexter synchronously and refunds the 1 credit immediately on
- * failure, rather than queuing it the way dashboard bulk campaigns do.
- */
-async function sendSingleSms({ userId, recipient, message }) {
-  await deductCredits(userId, 1);
-  const senderId = await resolveSenderId(userId);
-
-  try {
-    const result = await smsClient.sendSms({ to: recipient, from: senderId.value, sms: message });
-
-    if (!result.success) {
-      await refundCredits(userId, 1);
-    }
-
-    return {
-      success: result.success,
-      providerMessageId: result.providerMessageId,
-      usedSenderId: senderId.value,
-    };
-  } catch (error) {
-    await refundCredits(userId, 1);
-    throw ApiError.internal("SMS provider error — credit refunded");
-  }
-}
-
 module.exports = {
-  deductCredits,
-  refundCredits,
-  resolveSenderId,
+  storeParsedContacts,
+  fetchParsedContacts,
   createCampaign,
   cancelCampaign,
   listCampaigns,
   getCampaign,
-  sendSingleSms,
 };

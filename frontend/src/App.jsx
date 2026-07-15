@@ -31,6 +31,8 @@ import CampaignsListPage  from '@/features/sms/CampaignsListPage';
 import NewCampaignPage    from '@/features/sms/NewCampaignPage';
 import CampaignDetailPage from '@/features/sms/CampaignDetailPage';
 import SenderIdsPage      from '@/features/sms/SenderIdsPage';
+import PhonebooksPage      from '@/features/sms/PhonebooksPage';
+import PhonebookDetailPage from '@/features/sms/PhonebookDetailPage';
 
 import EsimCountriesPage   from '@/features/esim/EsimCountriesPage';
 import EsimPackagesPage    from '@/features/esim/EsimPackagesPage';
@@ -104,6 +106,8 @@ export default function App() {
         <Route path="sms/campaigns/new" element={<NewCampaignPage />} />
         <Route path="sms/campaigns/:id" element={<CampaignDetailPage />} />
         <Route path="sms/sender-ids"    element={<SenderIdsPage />} />
+		<Route path="sms/phonebooks"           element={<PhonebooksPage />} />
+        <Route path="sms/phonebooks/:id"       element={<PhonebookDetailPage />} />
 
         <Route path="esim"                       element={<EsimCountriesPage />} />
         <Route path="esim/packages/:countryCode" element={<EsimPackagesPage />} />

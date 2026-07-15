@@ -60,3 +60,49 @@ function normalizeStatusResponse(raw) {
 }
 
 module.exports = { submitOrder, checkStatus };
+
+/**
+ * Fetch the provider's live product catalog.
+ * Returns an array of normalized product objects.
+ *
+ * NOTE: The endpoint path and response shape below are illustrative.
+ * Confirm against your live SME API docs and adjust normalizeProduct()
+ * — that is the only function that needs to change.
+ *
+ * Expected normalized shape:
+ * {
+ *   code:     string   — unique product code matching our Product.code
+ *   name:     string   — display name
+ *   cost:     number   — provider's current cost price (Naira, not kobo)
+ *   category: string   — "airtime" | "data" | "electricity" | "tv"
+ *   network:  string?  — "MTN" | "AIRTEL" | "GLO" | "9MOBILE" | null
+ * }
+ */
+async function fetchCatalog() {
+  const response = await client.get("/products");
+  const raw = response.data?.products || response.data?.data || [];
+  return raw.map(normalizeProduct).filter(Boolean);
+}
+
+function normalizeProduct(raw) {
+  // Adjust field names here once you have live API docs
+  if (!raw.code && !raw.product_code) return null;
+  return {
+    code:     raw.code     || raw.product_code,
+    name:     raw.name     || raw.product_name || raw.description,
+    cost:     Number(raw.cost || raw.price || raw.amount || 0),
+    category: normalizeCategorySlug(raw.category || raw.type || ""),
+    network:  raw.network  || raw.provider || null,
+  };
+}
+
+function normalizeCategorySlug(raw) {
+  const r = (raw || "").toLowerCase();
+  if (r.includes("airtime") || r.includes("topup"))      return "airtime";
+  if (r.includes("data")    || r.includes("bundle"))     return "data";
+  if (r.includes("electric") || r.includes("disco"))     return "electricity";
+  if (r.includes("tv")      || r.includes("cable"))      return "tv";
+  return r;
+}
+
+module.exports = { submitOrder, checkStatus, fetchCatalog };

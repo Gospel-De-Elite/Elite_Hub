@@ -1,6 +1,8 @@
-const prisma = require("../../common/config/prisma");
+const prisma   = require("../../common/config/prisma");
 const ApiError = require("../../common/errors/ApiError");
 const logAudit = require("../../common/utils/auditLogger");
+const { catalogSyncQueue } = require("../../queues");
+const catalogSyncService   = require("./catalogSync.service");
 
 async function listProviders() {
   return prisma.provider.findMany({
@@ -77,4 +79,45 @@ async function resetHealth(providerId, actor) {
   return updated;
 }
 
-module.exports = { listProviders, getProvider, updateProvider, resetHealth };
+/**
+ * Enqueue a catalog sync job for a provider.
+ * Creates the sync record (RUNNING), adds it to the queue, returns immediately.
+ * Admin polls GET /:id/sync-status/:syncId for the result.
+ */
+async function triggerCatalogSync(providerId, actor) {
+  const sync = await catalogSyncService.initiateCatalogSync(providerId, actor.id);
+
+  await catalogSyncQueue.add(
+    "sync-provider-catalog",
+    { syncId: sync.id },
+    {
+      attempts: 2,
+      backoff:  { type: "exponential", delay: 30_000 },
+    }
+  );
+
+  return sync;
+}
+
+async function getProviderServices(providerId) {
+  return catalogSyncService.getProviderServices(providerId);
+}
+
+async function getSyncStatus(syncId) {
+  return catalogSyncService.getSyncStatus(syncId);
+}
+
+async function listSyncHistory(providerId) {
+  return catalogSyncService.listSyncHistory(providerId);
+}
+
+module.exports = {
+  listProviders,
+  getProvider,
+  updateProvider,
+  resetHealth,
+  triggerCatalogSync,
+  getProviderServices,
+  getSyncStatus,
+  listSyncHistory,
+};

@@ -59,3 +59,36 @@ function normalizeStatusResponse(raw) {
 }
 
 module.exports = { submitOrder, checkStatus };
+
+/**
+ * Fetch VTU.ng's live product catalog.
+ * Same normalized shape as smeApi.client.js — adjust normalizeProduct()
+ * to match VTU.ng's actual response format once you have live docs.
+ */
+async function fetchCatalog() {
+  const response = await client.get("/products");
+  const raw = response.data?.products || response.data?.data || [];
+  return raw.map(normalizeProduct).filter(Boolean);
+}
+
+function normalizeProduct(raw) {
+  if (!raw.code && !raw.product_code) return null;
+  return {
+    code:     raw.code     || raw.product_code,
+    name:     raw.name     || raw.product_name || raw.description,
+    cost:     Number(raw.cost || raw.price || raw.amount || 0),
+    category: normalizeCategorySlug(raw.category || raw.type || ""),
+    network:  raw.network  || raw.operator || null,
+  };
+}
+
+function normalizeCategorySlug(raw) {
+  const r = (raw || "").toLowerCase();
+  if (r.includes("airtime") || r.includes("topup"))   return "airtime";
+  if (r.includes("data")    || r.includes("bundle"))  return "data";
+  if (r.includes("electric") || r.includes("disco"))  return "electricity";
+  if (r.includes("tv")      || r.includes("cable"))   return "tv";
+  return r;
+}
+
+module.exports = { submitOrder, checkStatus, fetchCatalog };
