@@ -63,6 +63,7 @@ import AdminBlogEditorPage   from '@/features/admin/AdminBlogEditorPage';
 import BlogListPage from '@/features/blog/BlogListPage';
 import BlogPostPage from '@/features/blog/BlogPostPage';
 import ComingSoonPage from '@/components/common/ComingSoonPage';
+import NotificationsPage from '@/features/notifications/NotificationsPage';
 
 export default function App() {
   return (
@@ -120,7 +121,7 @@ export default function App() {
         <Route path="api/docs"           element={<ApiDocsPage />} />
 
         <Route path="referrals"     element={<ComingSoonPage title="Referrals" />} />
-        <Route path="notifications" element={<ComingSoonPage title="Notifications" />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile"       element={<ProfilePage />} />
       </Route>
 

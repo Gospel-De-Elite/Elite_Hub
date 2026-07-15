@@ -29,6 +29,10 @@ class ApiError extends Error {
     return new ApiError(409, message);
   }
 
+  static unprocessableEntity(message) {
+    return new ApiError(422, message);
+  }
+
   static tooManyRequests(message = "Too many requests") {
     return new ApiError(429, message);
   }

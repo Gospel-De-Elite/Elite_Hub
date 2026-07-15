@@ -1,0 +1,4 @@
+2026-07-15 12:05:35 +01:00: ◇ injected env (44) from .env // tip: ⌘ override existing { override: true }
+2026-07-15 12:05:35 +01:00: [2026-07-15 12:05:35] INFO: BullMQ queues initialized: wallet, sms, refund, notification, webhook, reconciliation, catalog-sync
+2026-07-15 12:05:36 +01:00: [2026-07-15 12:05:36] INFO: Worker process started — listening on: webhook, reconciliation, notification, sms, catalog-sync
+2026-07-15 12:05:37 +01:00: [2026-07-15 12:05:37] INFO: BullMQ Redis connection established

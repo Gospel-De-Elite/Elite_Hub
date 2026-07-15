@@ -34,4 +34,12 @@ async function markAsRead(userId, notificationId) {
   });
 }
 
-module.exports = { listNotifications, markAsRead };
+async function markAllAsRead(userId) {
+  const result = await prisma.notification.updateMany({
+    where: { userId, readAt: null },
+    data: { readAt: new Date() },
+  });
+  return { updatedCount: result.count };
+}
+
+module.exports = { listNotifications, markAsRead, markAllAsRead };

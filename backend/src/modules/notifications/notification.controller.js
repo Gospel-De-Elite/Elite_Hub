@@ -15,4 +15,9 @@ const markAsRead = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, data: notification });
 });
 
-module.exports = { listNotifications, markAsRead };
+const markAllAsRead = catchAsync(async (req, res) => {
+  const result = await service.markAllAsRead(req.user.id);
+  res.status(200).json({ success: true, data: result });
+});
+
+module.exports = { listNotifications, markAsRead, markAllAsRead };
