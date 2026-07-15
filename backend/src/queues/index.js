@@ -19,15 +19,16 @@ const defaultJobOptions = {
 //   notification   -> introduced here, consumed from Phase 3 onward
 const opts = { connection, defaultJobOptions };
 
-const walletQueue = new Queue("wallet", opts);
-const smsQueue = new Queue("sms", opts);
-const refundQueue = new Queue("refund", opts);
-const notificationQueue = new Queue("notification", opts);
-const webhookQueue = new Queue("webhook", opts);
+const walletQueue        = new Queue("wallet",        opts);
+const smsQueue           = new Queue("sms",           opts);
+const refundQueue        = new Queue("refund",        opts);
+const notificationQueue  = new Queue("notification",  opts);
+const webhookQueue       = new Queue("webhook",       opts);
 const reconciliationQueue = new Queue("reconciliation", opts);
+const catalogSyncQueue   = new Queue("catalog-sync",  opts);
 
 logger.info(
-  "BullMQ queues initialized: wallet, sms, refund, notification, webhook, reconciliation"
+  "BullMQ queues initialized: wallet, sms, refund, notification, webhook, reconciliation, catalog-sync"
 );
 
 module.exports = {
@@ -37,4 +38,5 @@ module.exports = {
   notificationQueue,
   webhookQueue,
   reconciliationQueue,
+  catalogSyncQueue,
 };

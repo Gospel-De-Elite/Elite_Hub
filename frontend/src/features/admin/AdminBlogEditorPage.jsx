@@ -1,34 +1,42 @@
 /**
- * AdminBlogEditorPage — /admin/blog/new and /admin/blog/:id/edit
+ * AdminBlogEditorPage — /admin/blog/new  and  /admin/blog/:id/edit
  *
- * Split-pane markdown editor:
- *   Left  → write (textarea)
- *   Right → live preview (rendered markdown)
+ * BUGS FIXED from v1:
+ *   1. markdownToHtml called on every keystroke → now debounced 300ms
+ *      so the preview only rerenders after the user pauses typing,
+ *      instead of blocking the main thread on every character.
+ *   2. Autosave useEffect had `form` in its dependency array, causing
+ *      the interval to be torn down and recreated on every keystroke —
+ *      it never actually fired. Fixed with a ref-based approach.
  *
- * Features:
- *   - Title, slug (auto-generated, editable), excerpt, cover image URL
- *   - Live preview tab / split-pane on desktop
- *   - Auto-save to draft every 30 seconds while content changes
- *   - Publish / Unpublish toggle
- *   - Responsive — single pane on mobile, split on md+
+ * NEW in v2:
+ *   - Markdown toolbar (H, B, I, ordered list, unordered list, code block,
+ *     link) — wraps/inserts syntax around the current selection or at the
+ *     cursor, so the user never has to guess what characters to type.
+ *   - Word count displayed in the footer of the editor pane.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link }              from "react-router-dom";
 import { useQuery, useMutation, useQueryClient }     from "@tanstack/react-query";
-import apiClient         from "@/api/client";
+import apiClient          from "@/api/client";
 import { markdownToHtml } from "@/lib/markdown";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
-import { Label }    from "@/components/ui/label";
-import { Alert }    from "@/components/ui/alert";
-import { Badge }    from "@/components/ui/badge";
-import { Spinner }  from "@/components/ui/spinner";
+import { Button }  from "@/components/ui/button";
+import { Input }   from "@/components/ui/input";
+import { Label }   from "@/components/ui/label";
+import { Alert }   from "@/components/ui/alert";
+import { Badge }   from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Save, Eye, EyeOff, ArrowLeft, RefreshCw } from "lucide-react";
+import {
+  Save, Eye, EyeOff, ArrowLeft, RefreshCw,
+  Heading2, Bold, Italic, List, ListOrdered,
+  Code, Link as LinkIcon, Quote, Minus,
+} from "lucide-react";
 
-const AUTOSAVE_INTERVAL = 30_000; // 30 seconds
+const AUTOSAVE_INTERVAL = 30_000;
+const PREVIEW_DEBOUNCE  = 300;
 
 function generateSlugLocal(title) {
   return title
@@ -40,8 +48,206 @@ function generateSlugLocal(title) {
     .slice(0, 200);
 }
 
+// ─── Markdown Toolbar ─────────────────────────────────────────────────────────
+/**
+ * Inserts or wraps markdown syntax in the textarea.
+ * Works with the current selection: if text is selected, it wraps it.
+ * If nothing is selected, it inserts a placeholder at the cursor.
+ */
+function applyFormat(textareaRef, type, onChange) {
+  const el    = textareaRef.current;
+  if (!el) return;
+
+  const start = el.selectionStart;
+  const end   = el.selectionEnd;
+  const value = el.value;
+  const sel   = value.slice(start, end);
+
+  let before = "";
+  let after  = "";
+  let placeholder = "";
+  let newCursorOffset = null; // where to place cursor after insert
+
+  switch (type) {
+    case "h2":
+      // Insert heading at the start of the current line
+      before = "## ";
+      placeholder = sel || "Heading";
+      after  = "";
+      break;
+    case "h3":
+      before = "### ";
+      placeholder = sel || "Heading";
+      after  = "";
+      break;
+    case "bold":
+      before = "**";
+      after  = "**";
+      placeholder = sel || "bold text";
+      break;
+    case "italic":
+      before = "*";
+      after  = "*";
+      placeholder = sel || "italic text";
+      break;
+    case "code":
+      if (sel.includes("\n") || !sel) {
+        // Block code
+        before = "```\n";
+        after  = "\n```";
+        placeholder = sel || "code here";
+      } else {
+        // Inline code
+        before = "`";
+        after  = "`";
+        placeholder = sel || "code";
+      }
+      break;
+    case "link":
+      before = "[";
+      after  = "](url)";
+      placeholder = sel || "link text";
+      break;
+    case "ul":
+      // Prefix each selected line with "- "
+      if (sel) {
+        const wrapped = sel.split("\n").map((l) => `- ${l}`).join("\n");
+        const newVal  = value.slice(0, start) + wrapped + value.slice(end);
+        onChange({ target: { name: "content", value: newVal } });
+        setTimeout(() => {
+          el.focus();
+          el.setSelectionRange(start, start + wrapped.length);
+        }, 0);
+        return;
+      }
+      before = "- ";
+      placeholder = "List item";
+      break;
+    case "ol":
+      if (sel) {
+        const wrapped = sel.split("\n").map((l, idx) => `${idx + 1}. ${l}`).join("\n");
+        const newVal  = value.slice(0, start) + wrapped + value.slice(end);
+        onChange({ target: { name: "content", value: newVal } });
+        setTimeout(() => {
+          el.focus();
+          el.setSelectionRange(start, start + wrapped.length);
+        }, 0);
+        return;
+      }
+      before = "1. ";
+      placeholder = "List item";
+      break;
+    case "quote":
+      if (sel) {
+        const wrapped = sel.split("\n").map((l) => `> ${l}`).join("\n");
+        const newVal  = value.slice(0, start) + wrapped + value.slice(end);
+        onChange({ target: { name: "content", value: newVal } });
+        setTimeout(() => {
+          el.focus();
+          el.setSelectionRange(start, start + wrapped.length);
+        }, 0);
+        return;
+      }
+      before = "> ";
+      placeholder = "Quoted text";
+      break;
+    case "hr":
+      before = "\n---\n";
+      placeholder = "";
+      break;
+    default:
+      return;
+  }
+
+  const insert  = before + (sel || placeholder) + after;
+  const newVal  = value.slice(0, start) + insert + value.slice(end);
+
+  onChange({ target: { name: "content", value: newVal } });
+
+  // Restore focus and select the inserted placeholder text
+  setTimeout(() => {
+    el.focus();
+    if (sel) {
+      // Had a selection — select the whole wrapped result
+      el.setSelectionRange(start, start + insert.length);
+    } else {
+      // No selection — select just the placeholder so the user can
+      // immediately type to replace it
+      const selStart = start + before.length;
+      const selEnd   = selStart + placeholder.length;
+      el.setSelectionRange(selStart, selEnd);
+    }
+  }, 0);
+}
+
+function ToolbarButton({ title, onClick, children }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={
+        "flex h-7 w-7 items-center justify-center rounded text-muted-foreground " +
+        "hover:bg-secondary hover:text-foreground transition-colors"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function Toolbar({ textareaRef, onChange }) {
+  const fmt = (type) => applyFormat(textareaRef, type, onChange);
+
+  return (
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-background px-2 py-1.5">
+      {/* Headings */}
+      <ToolbarButton title="Heading 2  (## )" onClick={() => fmt("h2")}>
+        <span className="text-xs font-bold">H2</span>
+      </ToolbarButton>
+      <ToolbarButton title="Heading 3  (### )" onClick={() => fmt("h3")}>
+        <span className="text-xs font-bold">H3</span>
+      </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      {/* Inline */}
+      <ToolbarButton title="Bold  (**text**)" onClick={() => fmt("bold")}>
+        <Bold className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Italic  (*text*)" onClick={() => fmt("italic")}>
+        <Italic className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Inline / block code  (`code`)" onClick={() => fmt("code")}>
+        <Code className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Link  ([text](url))" onClick={() => fmt("link")}>
+        <LinkIcon className="h-3.5 w-3.5" />
+      </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-border" />
+
+      {/* Block */}
+      <ToolbarButton title="Unordered list  (- item)" onClick={() => fmt("ul")}>
+        <List className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Ordered list  (1. item)" onClick={() => fmt("ol")}>
+        <ListOrdered className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Blockquote  (> text)" onClick={() => fmt("quote")}>
+        <Quote className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Horizontal rule  (---)" onClick={() => fmt("hr")}>
+        <Minus className="h-3.5 w-3.5" />
+      </ToolbarButton>
+    </div>
+  );
+}
+
+// ─── Main Editor Page ─────────────────────────────────────────────────────────
+
 export default function AdminBlogEditorPage() {
-  const { id }   = useParams(); // undefined = new post
+  const { id }   = useParams();
   const navigate = useNavigate();
   const qc       = useQueryClient();
   const isEdit   = Boolean(id);
@@ -50,13 +256,34 @@ export default function AdminBlogEditorPage() {
     title: "", slug: "", excerpt: "", coverImageUrl: "", content: "",
   });
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
-  const [status, setStatus]   = useState("DRAFT");
-  const [saved, setSaved]     = useState(true);
+  const [status,  setStatus]  = useState("DRAFT");
+  const [saved,   setSaved]   = useState(true);
   const [saveMsg, setSaveMsg] = useState("");
-  const [error, setError]     = useState("");
-  const [preview, setPreview] = useState(false); // mobile preview toggle
-  const lastSavedContent      = useRef("");
-  const postIdRef             = useRef(id || null);
+  const [error,   setError]   = useState("");
+
+  // Debounced HTML for the preview pane — avoids running the parser
+  // on every single keystroke which was blocking the main thread.
+  const [previewHtml, setPreviewHtml] = useState("");
+
+  const textareaRef       = useRef(null);
+  const lastSavedContent  = useRef("");
+  const postIdRef         = useRef(id || null);
+  // Refs for autosave so the interval closure always has fresh values
+  // without needing to tear down and recreate the interval on every render.
+  const savedRef          = useRef(true);
+  const formRef           = useRef(form);
+
+  // Keep refs in sync
+  useEffect(() => { savedRef.current = saved; },   [saved]);
+  useEffect(() => { formRef.current  = form;  },   [form]);
+
+  // Debounce preview updates — 300ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPreviewHtml(markdownToHtml(form.content));
+    }, PREVIEW_DEBOUNCE);
+    return () => clearTimeout(timer);
+  }, [form.content]);
 
   // Load existing post when editing
   const { isLoading } = useQuery({
@@ -67,51 +294,46 @@ export default function AdminBlogEditorPage() {
       return data.data;
     },
     onSuccess: (post) => {
-      setForm({
+      const loaded = {
         title:        post.title,
         slug:         post.slug,
         excerpt:      post.excerpt,
         coverImageUrl: post.coverImageUrl || "",
         content:      post.content,
-      });
+      };
+      setForm(loaded);
       setStatus(post.status);
-      setSlugManuallyEdited(true); // don't auto-rewrite slug on load
+      setSlugManuallyEdited(true);
       lastSavedContent.current = post.content;
+      setSaved(true);
     },
   });
 
-  // Save (create or update) mutation
   const saveMutation = useMutation({
-    mutationFn: async (payload) => {
-      if (postIdRef.current) {
-        return apiClient.patch(`/blog/admin/posts/${postIdRef.current}`, payload);
-      } else {
-        return apiClient.post("/blog/admin/posts", payload);
-      }
-    },
+    mutationFn: (payload) =>
+      postIdRef.current
+        ? apiClient.patch(`/blog/admin/posts/${postIdRef.current}`, payload)
+        : apiClient.post("/blog/admin/posts", payload),
     onSuccess: (res) => {
       const post = res.data.data;
       postIdRef.current        = post.id;
-      lastSavedContent.current = form.content;
+      lastSavedContent.current = formRef.current.content;
       setSaved(true);
       setSaveMsg("Saved");
       setTimeout(() => setSaveMsg(""), 2000);
       qc.invalidateQueries({ queryKey: ["admin-blog-posts"] });
     },
-    onError: (e) => {
-      setError(e.response?.data?.message || "Save failed.");
-    },
+    onError: (e) => setError(e.response?.data?.message || "Save failed."),
   });
 
-  // Publish / Unpublish mutation
   const publishMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: () => {
       const pid = postIdRef.current;
       if (!pid) throw new Error("Save the post before publishing.");
-      const endpoint = status === "PUBLISHED"
+      const ep = status === "PUBLISHED"
         ? `/blog/admin/posts/${pid}/unpublish`
         : `/blog/admin/posts/${pid}/publish`;
-      return apiClient.patch(endpoint);
+      return apiClient.patch(ep);
     },
     onSuccess: (res) => {
       setStatus(res.data.data.status);
@@ -120,42 +342,46 @@ export default function AdminBlogEditorPage() {
     onError: (e) => setError(e.response?.data?.message || "Action failed."),
   });
 
-  // Auto-generate slug from title
+  // Auto-slug from title (only while slug hasn't been manually edited)
   useEffect(() => {
     if (slugManuallyEdited) return;
     setForm((f) => ({ ...f, slug: generateSlugLocal(f.title) }));
   }, [form.title, slugManuallyEdited]);
 
-  // Mark unsaved on content change
+  // Mark unsaved when content diverges from last save
   useEffect(() => {
     setSaved(form.content === lastSavedContent.current);
   }, [form.content]);
 
-  // Autosave every 30s when unsaved
+  // Autosave — uses refs so interval doesn't need to be recreated each render
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!saved && form.title && form.content) {
-        saveMutation.mutate(form);
+      const f = formRef.current;
+      if (!savedRef.current && f.title && f.content) {
+        saveMutation.mutate(f);
       }
     }, AUTOSAVE_INTERVAL);
     return () => clearInterval(interval);
-  }, [saved, form]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
     if (name === "slug") setSlugManuallyEdited(true);
+    if (name === "content") setSaved(false);
   }, []);
 
   function handleSave() {
-    if (!form.title.trim()) { setError("Title is required."); return; }
+    if (!form.title.trim())   { setError("Title is required.");   return; }
     if (!form.content.trim()) { setError("Content is required."); return; }
     if (!form.excerpt.trim()) { setError("Excerpt is required."); return; }
     setError("");
     saveMutation.mutate(form);
   }
 
-  const previewHtml = markdownToHtml(form.content);
+  const wordCount = form.content.trim()
+    ? form.content.trim().split(/\s+/).length
+    : 0;
 
   if (isLoading) {
     return (
@@ -167,7 +393,7 @@ export default function AdminBlogEditorPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* ── Page header ───────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link
@@ -181,13 +407,11 @@ export default function AdminBlogEditorPage() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Status badge */}
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant={status === "PUBLISHED" ? "success" : "default"}>
             {status}
           </Badge>
 
-          {/* Saved indicator */}
           {!saved && (
             <span className="text-xs text-muted-foreground">Unsaved changes</span>
           )}
@@ -202,7 +426,9 @@ export default function AdminBlogEditorPage() {
             disabled={saveMutation.isPending}
             onClick={handleSave}
           >
-            {saveMutation.isPending ? <Spinner className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            {saveMutation.isPending
+              ? <Spinner className="h-4 w-4" />
+              : <Save className="h-4 w-4" />}
             Save draft
           </Button>
 
@@ -225,7 +451,7 @@ export default function AdminBlogEditorPage() {
 
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      {/* Meta fields */}
+      {/* ── Meta fields ───────────────────────────────────────────────── */}
       <Card>
         <CardContent className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
           <div className="space-y-1.5 sm:col-span-2">
@@ -254,6 +480,7 @@ export default function AdminBlogEditorPage() {
                 className="font-mono text-sm"
               />
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 className="shrink-0"
@@ -285,7 +512,7 @@ export default function AdminBlogEditorPage() {
             <Label htmlFor="excerpt">
               Excerpt{" "}
               <span className="text-xs text-muted-foreground">
-                ({form.excerpt.length}/500 chars)
+                ({form.excerpt.length}/500)
               </span>
             </Label>
             <textarea
@@ -306,31 +533,40 @@ export default function AdminBlogEditorPage() {
         </CardContent>
       </Card>
 
-      {/* Editor / Preview — tabs on mobile, split on md+ */}
-      <Card>
+      {/* ── Editor / Preview ──────────────────────────────────────────── */}
+      <Card className="overflow-hidden">
         <CardContent className="p-0">
+
           {/* Mobile: tabs */}
           <div className="md:hidden">
             <Tabs defaultValue="write">
-              <TabsList className="w-full rounded-b-none">
-                <TabsTrigger value="write"  className="flex-1">Write</TabsTrigger>
+              <TabsList className="w-full rounded-none border-b border-border">
+                <TabsTrigger value="write"   className="flex-1">Write</TabsTrigger>
                 <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
               </TabsList>
-              <TabsContent value="write" className="p-0">
+              <TabsContent value="write" className="p-0 mt-0">
+                <Toolbar textareaRef={textareaRef} onChange={handleChange} />
                 <textarea
+                  ref={textareaRef}
                   name="content"
                   value={form.content}
                   onChange={handleChange}
                   rows={24}
-                  placeholder="Write your post in Markdown…"
+                  placeholder="Start writing…"
+                  spellCheck
                   className={
-                    "w-full rounded-b-xl border-0 bg-background px-4 py-3 font-mono text-sm " +
+                    "w-full bg-background px-4 py-3 font-mono text-sm " +
                     "placeholder:text-muted-foreground focus-visible:outline-none resize-none"
                   }
                 />
+                <div className="border-t border-border px-4 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    {wordCount.toLocaleString()} {wordCount === 1 ? "word" : "words"}
+                  </span>
+                </div>
               </TabsContent>
-              <TabsContent value="preview" className="p-4 min-h-[400px]">
-                {form.content
+              <TabsContent value="preview" className="p-4 mt-0 min-h-[400px]">
+                {previewHtml
                   ? <div className="prose-blog" dangerouslySetInnerHTML={{ __html: previewHtml }} />
                   : <p className="text-muted-foreground text-sm">Nothing to preview yet.</p>
                 }
@@ -340,33 +576,34 @@ export default function AdminBlogEditorPage() {
 
           {/* Desktop: split pane */}
           <div className="hidden md:grid md:grid-cols-2 md:divide-x md:divide-border">
+
+            {/* Write pane */}
             <div className="flex flex-col">
-              <div className="border-b border-border px-4 py-2">
+              <div className="border-b border-border px-4 py-2 flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Markdown
                 </span>
+                <span className="text-xs text-muted-foreground">
+                  {wordCount.toLocaleString()} {wordCount === 1 ? "word" : "words"}
+                </span>
               </div>
+              <Toolbar textareaRef={textareaRef} onChange={handleChange} />
               <textarea
+                ref={textareaRef}
                 name="content"
                 value={form.content}
                 onChange={handleChange}
-                rows={32}
-                placeholder="Write your post in Markdown…
-
-# Heading 1
-## Heading 2
-
-**Bold**, *italic*, `code`
-
-- Bullet list
-1. Numbered list
-
-> Blockquote
-
-```js
-// Code block
-const hello = 'world';
-```"
+                rows={28}
+                placeholder={
+                  "Start writing your post…\n\n" +
+                  "Use the toolbar above or type Markdown directly:\n" +
+                  "  ## Heading 2\n" +
+                  "  **bold**  *italic*  `code`\n" +
+                  "  - Bullet list\n" +
+                  "  1. Numbered list\n" +
+                  "  > Blockquote"
+                }
+                spellCheck
                 className={
                   "flex-1 w-full bg-background px-4 py-3 font-mono text-sm " +
                   "placeholder:text-muted-foreground focus-visible:outline-none resize-none"
@@ -374,16 +611,24 @@ const hello = 'world';
               />
             </div>
 
-            <div className="flex flex-col overflow-hidden">
+            {/* Preview pane */}
+            <div className="flex flex-col">
               <div className="border-b border-border px-4 py-2">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Preview
                 </span>
               </div>
               <div className="flex-1 overflow-y-auto px-4 py-3">
-                {form.content
+                {previewHtml
                   ? <div className="prose-blog" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-                  : <p className="text-muted-foreground text-sm">Nothing to preview yet.</p>
+                  : (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 py-16 text-center">
+                      <p className="text-muted-foreground text-sm">Preview will appear here.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Updates 300ms after you stop typing.
+                      </p>
+                    </div>
+                  )
                 }
               </div>
             </div>

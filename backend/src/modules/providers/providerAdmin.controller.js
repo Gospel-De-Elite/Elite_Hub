@@ -25,4 +25,33 @@ const resetHealth = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, data: health });
 });
 
-module.exports = { listProviders, getProvider, updateProvider, resetHealth };
+const triggerCatalogSync = catchAsync(async (req, res) => {
+  const sync = await service.triggerCatalogSync(req.params.id, actorFrom(req));
+  res.status(202).json({ success: true, data: sync });
+});
+
+const getProviderServices = catchAsync(async (req, res) => {
+  const data = await service.getProviderServices(req.params.id);
+  res.status(200).json({ success: true, data });
+});
+
+const getSyncStatus = catchAsync(async (req, res) => {
+  const sync = await service.getSyncStatus(req.params.syncId);
+  res.status(200).json({ success: true, data: sync });
+});
+
+const listSyncHistory = catchAsync(async (req, res) => {
+  const history = await service.listSyncHistory(req.params.id);
+  res.status(200).json({ success: true, data: history });
+});
+
+module.exports = {
+  listProviders,
+  getProvider,
+  updateProvider,
+  resetHealth,
+  triggerCatalogSync,
+  getProviderServices,
+  getSyncStatus,
+  listSyncHistory,
+};

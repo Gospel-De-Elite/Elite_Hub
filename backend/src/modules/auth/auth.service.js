@@ -127,7 +127,7 @@ async function register(data, meta = {}) {
         phone,
         passwordHash,
         referralCode: newReferralCode,
-        referredBy:   referrer ? referrer.id : null,
+        ...(referrer && { referrer: { connect: { id: referrer.id } } }),
       },
       include: { role: true },
     });
