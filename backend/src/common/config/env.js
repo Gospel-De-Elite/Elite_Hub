@@ -21,6 +21,7 @@ const required = [
   "GOOGLE_CLIENT_SECRET",
   "GOOGLE_CALLBACK_URL",
   "SUPPORT_WHATSAPP_NUMBER",
+  "ANTHROPIC_API_KEY"
 ];
 
 for (const key of required) {
@@ -92,7 +93,16 @@ module.exports = {
 
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
-    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+    model:  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+  },
+
+  // Backup AI provider for the support widget — Gemini 1.5 Flash is free
+  // up to 1M tokens/day and kicks in automatically if Anthropic is
+  // unreachable. Set GEMINI_API_KEY to enable; if absent the system falls
+  // straight through to WhatsApp escalation instead.
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || null,
+    model:  process.env.GEMINI_MODEL  || "gemini-1.5-flash",
   },
 
   support: {

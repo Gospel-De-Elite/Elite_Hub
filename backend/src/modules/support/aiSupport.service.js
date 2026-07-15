@@ -1,10 +1,11 @@
 const Anthropic = require("@anthropic-ai/sdk");
-const prisma = require("../../common/config/prisma");
-const env = require("../../common/config/env");
-const walletService = require("../wallets/wallet.service");
-const catalogCache = require("../pricing/catalog.cache");
-const logAudit = require("../../common/utils/auditLogger");
-const logger = require("../../common/utils/logger");
+const prisma  = require("../../common/config/prisma");
+const env     = require("../../common/config/env");
+const walletService  = require("../wallets/wallet.service");
+const catalogCache   = require("../pricing/catalog.cache");
+const logAudit       = require("../../common/utils/auditLogger");
+const logger         = require("../../common/utils/logger");
+const { tryGeminiFallback } = require("./geminiSupport.service");
 
 const anthropic = new Anthropic({ apiKey: env.anthropic.apiKey });
 
@@ -273,13 +274,45 @@ async function sendMessage({ userId, userRole, conversationId, message }) {
       }
     }
   } catch (error) {
-    logger.error(`AI support call failed: ${error.message}`);
-    // Fail safe, not stuck: if Claude is unreachable, hand off to a human
-    // rather than leaving the user staring at a broken chat widget.
-    escalated = true;
+    logger.error(`Anthropic support call failed: ${error.message}`);
+
+    // ── Tier 2: Gemini fallback ─────────────────────────────────────────
+    // Pre-fetch the conversation history for Gemini's context window (it
+    // doesn't use tool-use — we inject real data via the system prompt).
+    const conversationHistory = await prisma.supportMessage.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: "asc" },
+      take: HISTORY_LIMIT,
+    });
+
+    const geminiReply = await tryGeminiFallback({
+      userId,
+      message,
+      conversationHistory,
+    });
+
+    if (geminiReply) {
+      // Gemini answered — save it and return without escalating.
+      await prisma.supportMessage.create({
+        data: { conversationId: conversation.id, senderType: "AI", message: geminiReply },
+      });
+
+      return {
+        conversationId: conversation.id,
+        message:        geminiReply,
+        escalated:      false,
+        whatsappLink:   null,
+      };
+    }
+
+    // ── Tier 3: WhatsApp escalation ──────────────────────────────────────
+    // Both AI providers are unavailable — hand off to a human rather than
+    // leaving the user with a broken experience.
+    logger.warn(`Both AI providers failed for user ${userId} — escalating to WhatsApp`);
+    escalated        = true;
     escalationReason = "AI assistant unavailable";
-    finalText =
-      "I'm having trouble connecting right now. Let me get you to a human agent on WhatsApp instead.";
+    finalText        =
+      "I'm having trouble connecting right now. Let me get you to a human agent on WhatsApp — they'll pick this up straight away.";
   }
 
   await prisma.supportMessage.create({

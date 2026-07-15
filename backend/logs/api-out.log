@@ -1,0 +1,10 @@
+2026-07-15 12:05:31 +01:00: ◇ injected env (43) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+2026-07-15 12:05:31 +01:00: ◇ injected env (43) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+2026-07-15 12:05:38 +01:00: [2026-07-15 12:05:38] INFO: BullMQ queues initialized: wallet, sms, refund, notification, webhook, reconciliation, catalog-sync
+2026-07-15 12:05:41 +01:00: [2026-07-15 12:05:41] INFO: Redis connected
+2026-07-15 12:05:41 +01:00: [2026-07-15 12:05:41] INFO: BullMQ Redis connection established
+2026-07-15 12:05:38 +01:00: [2026-07-15 12:05:38] INFO: BullMQ queues initialized: wallet, sms, refund, notification, webhook, reconciliation, catalog-sync
+2026-07-15 12:05:41 +01:00: [2026-07-15 12:05:41] INFO: Elite Hub API listening on port 5000 [production]
+2026-07-15 12:05:41 +01:00: [2026-07-15 12:05:41] INFO: Elite Hub API listening on port 5000 [production]
+2026-07-15 12:05:41 +01:00: [2026-07-15 12:05:41] INFO: Redis connected
+2026-07-15 12:05:41 +01:00: [2026-07-15 12:05:41] INFO: BullMQ Redis connection established

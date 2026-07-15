@@ -1,0 +1,56 @@
+2026-07-15 12:05:36 +01:00: ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+    at Object.keyGeneratorIpFallback (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:653:13)
+    at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:704:22)
+    at parseOptions (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:778:16)
+    at rateLimit (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:860:18)
+    at Object.<anonymous> (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/src/common/middleware/rateLimiter.js:38:28)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19) {
+  code: 'ERR_ERL_KEY_GEN_IPV6',
+  help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+}
+2026-07-15 12:05:40 +01:00: ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+    at Object.keyGeneratorIpFallback (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:653:13)
+    at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:704:22)
+    at parseOptions (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:778:16)
+    at rateLimit (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:860:18)
+    at Object.<anonymous> (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/src/modules/publicApi/apiRateLimiter.js:16:27)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19) {
+  code: 'ERR_ERL_KEY_GEN_IPV6',
+  help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+}
+2026-07-15 12:05:36 +01:00: ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+    at Object.keyGeneratorIpFallback (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:653:13)
+    at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:704:22)
+    at parseOptions (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:778:16)
+    at rateLimit (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:860:18)
+    at Object.<anonymous> (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/src/common/middleware/rateLimiter.js:38:28)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19) {
+  code: 'ERR_ERL_KEY_GEN_IPV6',
+  help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+}
+2026-07-15 12:05:40 +01:00: ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+    at Object.keyGeneratorIpFallback (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:653:13)
+    at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:704:22)
+    at parseOptions (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:778:16)
+    at rateLimit (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/node_modules/express-rate-limit/dist/index.cjs:860:18)
+    at Object.<anonymous> (/home/gospel/Gospel/elite-hub/Elite_Hub/backend/src/modules/publicApi/apiRateLimiter.js:16:27)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Object..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19) {
+  code: 'ERR_ERL_KEY_GEN_IPV6',
+  help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+}
