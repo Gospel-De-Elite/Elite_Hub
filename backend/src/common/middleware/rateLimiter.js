@@ -2,10 +2,6 @@ const rateLimit = require("express-rate-limit");
 const { RedisStore } = require("rate-limit-redis");
 const redisClient = require("../config/redis");
 
-// General-purpose limiter applied to every request. Per-role tiered limits
-// (Customer 100/min, Reseller 300/min, Agent 500/min) get applied separately
-// at the Developer API Platform layer in Phase 8 — this is the public-facing
-// floor, not the final word on rate limiting.
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
@@ -18,7 +14,6 @@ const generalLimiter = rateLimit({
   message: { success: false, message: "Too many requests, please try again shortly." },
 });
 
-// Tighter limiter for auth endpoints — slows down credential stuffing / brute force.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -31,14 +26,15 @@ const authLimiter = rateLimit({
   message: { success: false, message: "Too many attempts, please try again later." },
 });
 
-// Dedicated limiter for the AI support chat endpoint — keyed per user, not
-// IP, since this is always authenticated. Each message triggers a real
-// Anthropic API call (real cost + latency), so this deserves its own,
-// tighter ceiling rather than relying on the general limiter alone.
 const supportChatLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => {
+    if (req.user?.id) return `user:${req.user.id}`;
+    const ip = req.ip || req.socket?.remoteAddress || "unknown";
+    return `ip:${ip.replace(/^::ffff:/, "")}`;
+  },
+  skip: (req) => !!req.user?.id,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({
