@@ -30,6 +30,7 @@ const supportRoutes = require("./modules/support/support.routes");
 const supportAdminRoutes = require("./modules/support/supportAdmin.routes");
 const phonebookRoutes = require("./modules/phonebook/phonebook.routes");
 const blogRoutes = require("./modules/blog/blog.routes");
+const referralRoutes = require("./modules/referrals/referral.routes");
 const { generalLimiter } = require("./common/middleware/rateLimiter");
 const notFound = require("./common/middleware/notFound");
 const errorHandler = require("./common/middleware/errorHandler");
@@ -82,6 +83,7 @@ app.use("/api/v1/sms/phonebooks", phonebookRoutes);
 app.use("/api/v1/esim", esimRoutes);
 app.use("/api/v1/developer/api-keys", apiKeyRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/referrals", referralRoutes);
 app.use("/api/v1/support", supportRoutes);
 
 // Admin surface

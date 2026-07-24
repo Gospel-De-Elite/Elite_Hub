@@ -37,6 +37,48 @@ const menus = {
   Company: [{ label: "About Us" }, { label: "Contact" }, { label: "Careers" }, { label: "Partners" }, { label: "Terms & Policies" }],
 };
 
+/** Collapsible section used inside the mobile Sheet */
+function MobileMenuSection({ label, items }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border-b border-white/10 last:border-b-0">
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between py-3 text-sm font-semibold text-white"
+      >
+        {label}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={cn("h-4 w-4 text-white/60 transition-transform duration-200", open && "rotate-180")}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="flex flex-col pb-3 pl-2">
+          {items.map((item) => (
+            <a
+              key={item.label}
+              href={item.href || "#"}
+              className="py-1.5 text-sm text-landing-text-secondary hover:text-white"
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LandingNavbar() {
   const [scrolled, setScrolled] = useState(false);
 
@@ -99,35 +141,30 @@ export default function LandingNavbar() {
           <SheetTrigger className="text-white md:hidden">
             <Menu className="h-6 w-6" />
           </SheetTrigger>
-          <SheetContent side="right" className="border-white/10 bg-landing-bg">
+          <SheetContent side="right" className="flex flex-col border-white/10 bg-landing-bg">
             <SheetHeader>
               <SheetTitle className="text-white">Menu</SheetTitle>
             </SheetHeader>
-            <div className="flex flex-col gap-4">
+
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto py-2">
               {Object.entries(menus).map(([label, items]) => (
-                <div key={label}>
-                  <p className="mb-2 text-sm font-semibold text-white">{label}</p>
-                  <div className="space-y-1 pl-2">
-                    {items.map((item) => (
-                      <a key={item.label} href={item.href || "#"} className="block py-1 text-sm text-landing-text-secondary">
-                        {item.label}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+                <MobileMenuSection key={label} label={label} items={items} />
               ))}
-              <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
-                <SheetClose asChild>
-                  <Link to="/login" className="text-center text-sm font-medium text-white">
-                    Login
-                  </Link>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Button asChild className="bg-landing-primary hover:bg-landing-primary-hover">
-                    <Link to="/register">Get Started</Link>
-                  </Button>
-                </SheetClose>
-              </div>
+            </div>
+
+            {/* Auth buttons pinned to the bottom */}
+            <div className="flex flex-col gap-2 border-t border-white/10 pt-4">
+              <SheetClose asChild>
+                <Link to="/login" className="text-center text-sm font-medium text-white">
+                  Login
+                </Link>
+              </SheetClose>
+              <SheetClose asChild>
+                <Button asChild className="bg-landing-primary hover:bg-landing-primary-hover">
+                  <Link to="/register">Get Started</Link>
+                </Button>
+              </SheetClose>
             </div>
           </SheetContent>
         </Sheet>
