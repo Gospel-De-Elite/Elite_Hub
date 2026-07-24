@@ -63,6 +63,11 @@ app.get("/health", (req, res) => {
   res.status(200).json({ success: true, message: "Elite Hub API is running" });
 });
 
+// Alias for when the request comes through Nginx (/api/* → backend)
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({ success: true, message: "Elite Hub API is running" });
+});
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/wallet", walletRoutes);
 app.use("/api/v1/webhooks", webhookRoutes);
@@ -99,3 +104,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
+

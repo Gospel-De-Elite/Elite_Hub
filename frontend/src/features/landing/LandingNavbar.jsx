@@ -33,7 +33,7 @@ const menus = {
     { label: "Sandbox" },
     { label: "API Status" },
   ],
-  Resources: [{ label: "Pricing" }, { label: "FAQ", href: "#faq" }, { label: "Blog" }, { label: "Changelog" }, { label: "Help Center" }],
+  Resources: [{ label: "Pricing" }, { label: "FAQ", href: "#faq" }, { label: "Blog", href: "/blog" }, { label: "Changelog" }, { label: "Help Center" }],
   Company: [{ label: "About Us" }, { label: "Contact" }, { label: "Careers" }, { label: "Partners" }, { label: "Terms & Policies" }],
 };
 

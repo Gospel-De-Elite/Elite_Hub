@@ -78,18 +78,11 @@ export default function App() {
       <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
       <Route path="/auth/callback"     element={<AuthCallbackPage />} />
 
-	  <Route path="/blog"              element={<BlogListPage />} />
+      <Route path="/blog"              element={<BlogListPage />} />
       <Route path="/blog/:slug"        element={<BlogPostPage />} />
       {/* ── Customer dashboard ───────────────────────────────── */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<DashboardHomePage />} />
+      <Route path="/dashboard"	       element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+      <Route index element={<DashboardHomePage />} />
 
         <Route path="wallet"              element={<WalletOverviewPage />} />
         <Route path="wallet/fund"         element={<WalletFundingPage />} />
@@ -126,14 +119,7 @@ export default function App() {
       </Route>
 
       {/* ── Admin dashboard ──────────────────────────────────── */}
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }
-      >
+        <Route path="/admin"	   element={<AdminRoute><AdminLayout /></AdminRoute>}>
         <Route index element={<AdminDashboardPage />} />
 
         <Route path="users"    element={<AdminUsersPage />} />

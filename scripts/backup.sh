@@ -29,7 +29,7 @@ log "Starting backup → $FILENAME"
 # pg_dump piped directly into gzip — no uncompressed file ever touches disk.
 # PGPASSWORD is not set here; relies on .pgpass or local trust authentication
 # (the default for same-machine postgres connections on Ubuntu).
-if pg_dump -U "$DB_USER" -d "$DB_NAME" --no-password | gzip > "$FILENAME"; then
+if pg_dump -h localhost -U "$DB_USER" -d "$DB_NAME" --no-password | gzip > "$FILENAME"; then
   SIZE=$(du -sh "$FILENAME" | cut -f1)
   log "Backup complete. Size: $SIZE"
 else
