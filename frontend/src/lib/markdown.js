@@ -120,6 +120,71 @@ export function markdownToHtml(markdown) {
       continue;
     }
 
+    // ── GFM Table ─────────────────────────────────────────────────────────
+    // Detected by: current line has |, next line is a separator (|---|---| or ---)
+    if (
+      line.includes("|") &&
+      i + 1 < lines.length &&
+      /^[|\s\-:]+$/.test(lines[i + 1])
+    ) {
+      // Parse header
+      const headerCells = line
+        .split("|")
+        .map((c) => c.trim())
+        .filter((c) => c !== "");
+
+      // Parse alignment from separator row
+      const sepCells = lines[i + 1]
+        .split("|")
+        .map((c) => c.trim())
+        .filter((c) => c !== "");
+      const aligns = sepCells.map((s) => {
+        if (/^:-+:$/.test(s)) return "center";
+        if (/^-+:$/.test(s))  return "right";
+        return "left";
+      });
+
+      i += 2; // skip header + separator
+
+      // Parse body rows
+      const bodyRows = [];
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+        const cells = lines[i]
+          .split("|")
+          .map((c) => c.trim())
+          .filter((c) => c !== "");
+        bodyRows.push(cells);
+        i++;
+      }
+
+      const thHtml = headerCells
+        .map((cell, ci) => {
+          const align = aligns[ci] || "left";
+          return `<th class="px-4 py-2 text-left font-semibold border border-border bg-muted" style="text-align:${align}">${parseInline(cell)}</th>`;
+        })
+        .join("");
+
+      const tbodyHtml = bodyRows
+        .map((row) => {
+          const tds = headerCells.map((_, ci) => {
+            const align = aligns[ci] || "left";
+            const val   = row[ci] ?? "";
+            return `<td class="px-4 py-2 border border-border" style="text-align:${align}">${parseInline(val)}</td>`;
+          }).join("");
+          return `<tr class="even:bg-muted/40">${tds}</tr>`;
+        })
+        .join("");
+
+      output.push(
+        `<div class="overflow-x-auto my-4">` +
+        `<table class="w-full border-collapse text-sm">` +
+        `<thead><tr>${thHtml}</tr></thead>` +
+        `<tbody>${tbodyHtml}</tbody>` +
+        `</table></div>`
+      );
+      continue;
+    }
+
     // ── Empty line ────────────────────────────────────────────────────────
     if (trimmed === "") {
       i++; continue;
@@ -137,7 +202,9 @@ export function markdownToHtml(markdown) {
       !lines[i].startsWith("```") &&
       !/^[-*+] /.test(lines[i]) &&
       !/^\d+\. /.test(lines[i]) &&
-      !/^(-{3,}|\*{3,}|_{3,})$/.test(lines[i].trim())
+      !/^(-{3,}|\*{3,}|_{3,})$/.test(lines[i].trim()) &&
+      // Stop at table rows so they aren't swallowed as paragraph text
+      !(lines[i].includes("|") && i + 1 < lines.length && /^[|\s\-:]+$/.test(lines[i + 1]))
     ) {
       para.push(parseInline(lines[i]));
       i++;

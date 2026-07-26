@@ -93,7 +93,7 @@ module.exports = {
 
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
-    model:  process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+    model:  process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022",
   },
 
   // Backup AI provider for the support widget — Gemini 1.5 Flash is free

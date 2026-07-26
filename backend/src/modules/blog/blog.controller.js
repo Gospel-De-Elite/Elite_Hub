@@ -1,6 +1,7 @@
 "use strict";
 
 const catchAsync  = require("../../common/utils/catchAsync");
+const ApiError    = require("../../common/errors/ApiError");
 const blogService = require("./blog.service");
 
 // ─── Public ───────────────────────────────────────────────────────────────────
@@ -62,6 +63,12 @@ const remove = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
+const uploadImage = catchAsync(async (req, res) => {
+  if (!req.file) throw ApiError.badRequest("No image file provided.");
+  const imageUrl = `/uploads/blog/${req.file.filename}`;
+  res.status(200).json({ success: true, data: { url: imageUrl } });
+});
+
 module.exports = {
   listPublished,
   getBySlug,
@@ -73,4 +80,5 @@ module.exports = {
   publish,
   unpublish,
   remove,
+  uploadImage,
 };

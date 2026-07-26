@@ -6,7 +6,7 @@ const sendMessageValidation = [
     .notEmpty()
     .isLength({ max: 2000 })
     .withMessage("Message is required (max 2000 characters)"),
-  body("conversationId").optional().isUUID(),
+  body("conversationId").optional({ nullable: true }).isUUID(),
 ];
 
 module.exports = { sendMessageValidation };

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const passport = require("passport");
+const path = require("path");
 
 const googleStrategy = require("./modules/auth/google.strategy");
 const authRoutes = require("./modules/auth/auth.routes");
@@ -54,6 +55,10 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded blog images as static files
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 
 // Required for correct req.ip once this sits behind Nginx/Cloudflare in production
 app.set("trust proxy", 1);

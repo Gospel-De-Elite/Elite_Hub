@@ -32,7 +32,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Save, Eye, EyeOff, ArrowLeft, RefreshCw,
   Heading2, Bold, Italic, List, ListOrdered,
-  Code, Link as LinkIcon, Quote, Minus,
+  Code, Link as LinkIcon, Quote, Minus, Upload, Image as ImageIcon, Table,
 } from "lucide-react";
 
 const AUTOSAVE_INTERVAL = 30_000;
@@ -46,6 +46,16 @@ function generateSlugLocal(title) {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 200);
+}
+
+// Upload an image file and return the server-side URL
+async function uploadBlogImage(file) {
+  const formData = new FormData();
+  formData.append("image", file);
+  const { data } = await apiClient.post("/blog/admin/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.data.url;
 }
 
 // ─── Markdown Toolbar ─────────────────────────────────────────────────────────
@@ -155,6 +165,10 @@ function applyFormat(textareaRef, type, onChange) {
       before = "\n---\n";
       placeholder = "";
       break;
+    case "table":
+      before = "\n| Header 1 | Header 2 | Header 3 |\n| --- | --- | --- |\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |\n";
+      placeholder = "";
+      break;
     default:
       return;
   }
@@ -196,7 +210,7 @@ function ToolbarButton({ title, onClick, children }) {
   );
 }
 
-function Toolbar({ textareaRef, onChange }) {
+function Toolbar({ textareaRef, onChange, onUploadInlineImage, isUploadingInline }) {
   const fmt = (type) => applyFormat(textareaRef, type, onChange);
 
   return (
@@ -225,6 +239,13 @@ function Toolbar({ textareaRef, onChange }) {
         <LinkIcon className="h-3.5 w-3.5" />
       </ToolbarButton>
 
+      {/* Inline image upload */}
+      <ToolbarButton title="Upload & insert image" onClick={onUploadInlineImage}>
+        {isUploadingInline
+          ? <Spinner className="h-3.5 w-3.5" />
+          : <ImageIcon className="h-3.5 w-3.5 text-primary" />}
+      </ToolbarButton>
+
       <div className="mx-1 h-4 w-px bg-border" />
 
       {/* Block */}
@@ -237,8 +258,11 @@ function Toolbar({ textareaRef, onChange }) {
       <ToolbarButton title="Blockquote  (> text)" onClick={() => fmt("quote")}>
         <Quote className="h-3.5 w-3.5" />
       </ToolbarButton>
-      <ToolbarButton title="Horizontal rule  (---)" onClick={() => fmt("hr")}>
+      <ToolbarButton title="Horizontal rule  (--)" onClick={() => fmt("hr")}>
         <Minus className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Insert table" onClick={() => fmt("table")}>
+        <Table className="h-3.5 w-3.5" />
       </ToolbarButton>
     </div>
   );
@@ -266,12 +290,82 @@ export default function AdminBlogEditorPage() {
   const [previewHtml, setPreviewHtml] = useState("");
 
   const textareaRef       = useRef(null);
+  const coverFileRef      = useRef(null);
+  const inlineFileRef     = useRef(null);
   const lastSavedContent  = useRef("");
   const postIdRef         = useRef(id || null);
-  // Refs for autosave so the interval closure always has fresh values
-  // without needing to tear down and recreate the interval on every render.
   const savedRef          = useRef(true);
   const formRef           = useRef(form);
+
+  // Upload state
+  const [isUploadingCover,  setIsUploadingCover]  = useState(false);
+  const [isUploadingInline, setIsUploadingInline] = useState(false);
+
+  // Insert image markdown at cursor
+  const insertImageMarkdown = useCallback((url, alt = "image") => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start    = el.selectionStart;
+    const end      = el.selectionEnd;
+    const markdown = `\n![${alt}](${url})\n`;
+    const newVal   = el.value.slice(0, start) + markdown + el.value.slice(end);
+    setForm((f) => ({ ...f, content: newVal }));
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + markdown.length, start + markdown.length);
+    }, 0);
+  }, []);
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingCover(true);
+      const url = await uploadBlogImage(file);
+      setForm((f) => ({ ...f, coverImageUrl: url }));
+    } catch {
+      setError("Cover image upload failed.");
+    } finally {
+      setIsUploadingCover(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleInlineUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingInline(true);
+      const url = await uploadBlogImage(file);
+      insertImageMarkdown(url, file.name.replace(/\.[^.]+$/, ""));
+    } catch {
+      setError("Image upload failed.");
+    } finally {
+      setIsUploadingInline(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+        try {
+          setIsUploadingInline(true);
+          const url = await uploadBlogImage(file);
+          insertImageMarkdown(url, "pasted-image");
+        } catch {
+          setError("Pasted image upload failed.");
+        } finally {
+          setIsUploadingInline(false);
+        }
+      }
+    }
+  }
 
   // Keep refs in sync
   useEffect(() => { savedRef.current = saved; },   [saved]);
@@ -310,10 +404,18 @@ export default function AdminBlogEditorPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (payload) =>
-      postIdRef.current
-        ? apiClient.patch(`/blog/admin/posts/${postIdRef.current}`, payload)
-        : apiClient.post("/blog/admin/posts", payload),
+    mutationFn: (payload) => {
+      // Send null for optional fields left blank so express-validator's
+      // checkFalsy treats them as absent rather than failing isURL() on "".
+      const sanitized = {
+        ...payload,
+        coverImageUrl: payload.coverImageUrl?.trim() || null,
+        slug:          payload.slug?.trim()          || null,
+      };
+      return postIdRef.current
+        ? apiClient.patch(`/blog/admin/posts/${postIdRef.current}`, sanitized)
+        : apiClient.post("/blog/admin/posts", sanitized);
+    },
     onSuccess: (res) => {
       const post = res.data.data;
       postIdRef.current        = post.id;
@@ -353,11 +455,13 @@ export default function AdminBlogEditorPage() {
     setSaved(form.content === lastSavedContent.current);
   }, [form.content]);
 
-  // Autosave — uses refs so interval doesn't need to be recreated each render
+  // Autosave — uses refs so interval doesn't need to be recreated each render.
+  // Requires excerpt too, so we don't trigger a save that will fail backend
+  // notEmpty() validation when the excerpt field is still blank.
   useEffect(() => {
     const interval = setInterval(() => {
       const f = formRef.current;
-      if (!savedRef.current && f.title && f.content) {
+      if (!savedRef.current && f.title?.trim() && f.content?.trim() && f.excerpt?.trim()) {
         saveMutation.mutate(f);
       }
     }, AUTOSAVE_INTERVAL);
@@ -497,15 +601,26 @@ export default function AdminBlogEditorPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="coverImageUrl">Cover Image URL</Label>
-            <Input
-              id="coverImageUrl"
-              name="coverImageUrl"
-              value={form.coverImageUrl}
-              onChange={handleChange}
-              placeholder="https://…"
-              type="url"
-            />
+            <Label htmlFor="coverImageUrl">Cover Image</Label>
+            <div className="flex gap-2">
+              <Input
+                id="coverImageUrl"
+                name="coverImageUrl"
+                value={form.coverImageUrl}
+                onChange={handleChange}
+                placeholder="https://… or upload →"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                disabled={isUploadingCover}
+                onClick={() => coverFileRef.current?.click()}
+              >
+                {isUploadingCover ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-1.5 sm:col-span-2">
@@ -533,6 +648,10 @@ export default function AdminBlogEditorPage() {
         </CardContent>
       </Card>
 
+      {/* Hidden file inputs */}
+      <input ref={coverFileRef}  type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+      <input ref={inlineFileRef} type="file" accept="image/*" className="hidden" onChange={handleInlineUpload} />
+
       {/* ── Editor / Preview ──────────────────────────────────────────── */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
@@ -545,12 +664,18 @@ export default function AdminBlogEditorPage() {
                 <TabsTrigger value="preview" className="flex-1">Preview</TabsTrigger>
               </TabsList>
               <TabsContent value="write" className="p-0 mt-0">
-                <Toolbar textareaRef={textareaRef} onChange={handleChange} />
+                <Toolbar
+                  textareaRef={textareaRef}
+                  onChange={handleChange}
+                  onUploadInlineImage={() => inlineFileRef.current?.click()}
+                  isUploadingInline={isUploadingInline}
+                />
                 <textarea
                   ref={textareaRef}
                   name="content"
                   value={form.content}
                   onChange={handleChange}
+                  onPaste={handlePaste}
                   rows={24}
                   placeholder="Start writing…"
                   spellCheck
@@ -587,12 +712,18 @@ export default function AdminBlogEditorPage() {
                   {wordCount.toLocaleString()} {wordCount === 1 ? "word" : "words"}
                 </span>
               </div>
-              <Toolbar textareaRef={textareaRef} onChange={handleChange} />
+              <Toolbar
+                textareaRef={textareaRef}
+                onChange={handleChange}
+                onUploadInlineImage={() => inlineFileRef.current?.click()}
+                isUploadingInline={isUploadingInline}
+              />
               <textarea
                 ref={textareaRef}
                 name="content"
                 value={form.content}
                 onChange={handleChange}
+                onPaste={handlePaste}
                 rows={28}
                 placeholder={
                   "Start writing your post…\n\n" +
