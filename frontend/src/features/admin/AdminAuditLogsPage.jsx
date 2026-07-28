@@ -46,20 +46,20 @@ export default function AdminAuditLogsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
+        <div className="w-full space-y-1 sm:w-auto">
           <p className="text-xs text-muted-foreground">Action</p>
           <Input
             placeholder="e.g. WALLET_FINANCIAL_OVERRIDE"
-            className="h-9 w-52 text-sm"
+            className="h-9 w-full text-sm sm:w-52"
             value={action}
             onChange={(e) => { setAction(e.target.value); setPage(1); }}
           />
         </div>
-        <div className="space-y-1">
+        <div className="w-full space-y-1 sm:w-auto">
           <p className="text-xs text-muted-foreground">Entity Type</p>
           <Input
             placeholder="e.g. User"
-            className="h-9 w-32 text-sm"
+            className="h-9 w-full text-sm sm:w-32"
             value={entityType}
             onChange={(e) => { setEntityType(e.target.value); setPage(1); }}
           />
@@ -88,7 +88,7 @@ export default function AdminAuditLogsPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="overflow-x-auto p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Spinner className="h-8 w-8 text-primary" />

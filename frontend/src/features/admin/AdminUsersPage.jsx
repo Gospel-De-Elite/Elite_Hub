@@ -54,12 +54,12 @@ export default function AdminUsersPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex w-full gap-2 sm:w-auto">
           <Input
             placeholder="Email, phone, or name…"
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
-            className="w-60"
+            className="w-full sm:w-60"
           />
           <Button type="submit" size="sm">
             <Search className="h-4 w-4" />
@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
 
       {/* Table */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="overflow-x-auto p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <Spinner className="h-8 w-8 text-primary" />

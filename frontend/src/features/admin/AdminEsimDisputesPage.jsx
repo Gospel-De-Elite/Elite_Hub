@@ -67,7 +67,7 @@ export default function AdminEsimDisputesPage() {
       )}
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="overflow-x-auto p-0">
           {disputes?.length ? (
             <Table>
               <TableHeader>

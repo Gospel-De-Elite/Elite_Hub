@@ -43,4 +43,14 @@ const adjustWallet = catchAsync(async (req, res) => {
   res.status(200).json({ success: true, data: result });
 });
 
-module.exports = { listUsers, getUserDetail, updateStatus, adjustWallet };
+const assignRole = catchAsync(async (req, res) => {
+  const result = await service.assignRole({
+    userId:      req.params.id,
+    newRoleName: req.body.role,
+    // Pass the actor's role name so the service can enforce ADMIN vs SUPER_ADMIN rules
+    actor: { ...actorFrom(req), role: req.user.role },
+  });
+  res.status(200).json({ success: true, data: result });
+});
+
+module.exports = { listUsers, getUserDetail, updateStatus, adjustWallet, assignRole };

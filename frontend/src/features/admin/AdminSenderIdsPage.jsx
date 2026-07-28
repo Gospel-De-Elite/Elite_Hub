@@ -159,7 +159,7 @@ export default function AdminSenderIdsPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="overflow-x-auto p-0">
           {requests?.length ? (
             <Table>
               <TableHeader>

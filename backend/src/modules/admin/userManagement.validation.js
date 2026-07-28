@@ -23,4 +23,11 @@ const adjustWalletValidation = [
     .withMessage("A reason of at least 5 characters is required for a financial override"),
 ];
 
-module.exports = { listUsersValidation, userIdValidation, updateStatusValidation, adjustWalletValidation };
+const assignRoleValidation = [
+  param("id").isUUID().withMessage("Invalid user id"),
+  body("role")
+    .isIn(["CUSTOMER", "RESELLER", "AGENT", "ADMIN", "SUPER_ADMIN"])
+    .withMessage("role must be one of: CUSTOMER, RESELLER, AGENT, ADMIN, SUPER_ADMIN"),
+];
+
+module.exports = { listUsersValidation, userIdValidation, updateStatusValidation, adjustWalletValidation, assignRoleValidation };

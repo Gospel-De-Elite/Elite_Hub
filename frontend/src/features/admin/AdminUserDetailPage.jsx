@@ -15,6 +15,7 @@ import { getStatusVariant } from '@/lib/statusVariant';
 import { ArrowLeft } from 'lucide-react';
 
 const STATUS_OPTS = ['ACTIVE', 'SUSPENDED', 'BANNED'];
+const ALL_ROLES   = ['CUSTOMER', 'RESELLER', 'AGENT', 'ADMIN', 'SUPER_ADMIN'];
 const fmt = (v) => `₦${Number(v || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 
 function Row({ label, value }) {
@@ -44,6 +45,11 @@ export default function AdminUserDetailPage() {
   const [adjReason, setAdjReason]       = useState('');
   const [adjMsg, setAdjMsg]             = useState({ type: '', text: '' });
   const [savingAdj, setSavingAdj]       = useState(false);
+
+  // Role assignment form state
+  const [newRole, setNewRole]           = useState('');
+  const [roleMsg, setRoleMsg]           = useState({ type: '', text: '' });
+  const [savingRole, setSavingRole]     = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['admin-user', id],
@@ -99,6 +105,24 @@ export default function AdminUserDetailPage() {
     }
   }
 
+  async function handleRoleAssign(e) {
+    e.preventDefault();
+    if (!newRole) { setRoleMsg({ type: 'error', text: 'Select a role.' }); return; }
+    setSavingRole(true);
+    setRoleMsg({ type: '', text: '' });
+    try {
+      await apiClient.patch(`/admin/users/${id}/role`, { role: newRole });
+      setRoleMsg({ type: 'ok', text: `Role updated to ${newRole.replace('_', ' ')}.` });
+      queryClient.invalidateQueries({ queryKey: ['admin-user', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setNewRole('');
+    } catch (err) {
+      setRoleMsg({ type: 'error', text: err.response?.data?.message || 'Role update failed.' });
+    } finally {
+      setSavingRole(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -108,6 +132,18 @@ export default function AdminUserDetailPage() {
   }
 
   if (!user) return <p className="text-muted-foreground">User not found.</p>;
+
+  // Which roles can the current actor assign to this specific user?
+  const targetRole = user.role; // string e.g. 'ADMIN'
+  const adminProtected = ['ADMIN', 'SUPER_ADMIN'];
+  // ADMIN cannot touch ADMIN/SUPER_ADMIN users at all
+  const canAssignRoles = isSuperAdmin || !adminProtected.includes(targetRole);
+  // Roles visible in the selector depend on actor level
+  const assignableRoles = ALL_ROLES.filter((r) => {
+    if (r === targetRole) return false;          // skip current role (no-op)
+    if (isSuperAdmin)    return true;            // SUPER_ADMIN sees all
+    return !adminProtected.includes(r);          // ADMIN sees only sub-admin roles
+  });
 
   return (
     <div className="space-y-6">
@@ -149,7 +185,7 @@ export default function AdminUserDetailPage() {
 
           <Card>
             <CardHeader><CardTitle>Recent Orders</CardTitle></CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="overflow-x-auto p-0">
               {user.recentOrders?.length ? (
                 <Table>
                   <TableHeader>
@@ -231,6 +267,53 @@ export default function AdminUserDetailPage() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Assign Role card — hidden for ADMIN when target is ADMIN/SUPER_ADMIN */}
+          {canAssignRoles && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  Assign Role
+                  {isSuperAdmin && (
+                    <span className="ml-1.5 text-xs font-normal text-primary">SUPER_ADMIN</span>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleRoleAssign} className="space-y-3">
+                  {roleMsg.text && (
+                    <Alert variant={roleMsg.type === 'error' ? 'destructive' : 'default'}>
+                      {roleMsg.text}
+                    </Alert>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label>Current Role</Label>
+                    <p className="text-sm font-medium text-foreground">
+                      {targetRole.replace('_', ' ')}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-role">New Role</Label>
+                    <select
+                      id="new-role"
+                      value={newRole}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-input bg-secondary px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <option value="">Select role…</option>
+                      {assignableRoles.map((r) => (
+                        <option key={r} value={r}>{r.replace('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button type="submit" variant="secondary" className="w-full" disabled={savingRole || !newRole}>
+                    {savingRole && <Spinner className="mr-2 h-4 w-4" />}
+                    Assign Role
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
 
           {isSuperAdmin && (
             <Card>

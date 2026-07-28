@@ -92,7 +92,7 @@ export default function AdminPricingPage() {
       )}
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="overflow-x-auto p-0">
           <Table>
             <TableHeader>
               <TableRow>
